@@ -55,12 +55,12 @@ if run_button:
             "max_tokens": 200
         }
         headers = {"Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}"}
-        response = requests.post("https://api.openai.com/v1/chat/completions",
+        resp  = requests.post("https://api.openai.com/v1/chat/completions",
                           headers=headers, json=payload)
-        data = response.json()
+        data = resp .json()
         # check for errors
-        if not response.ok or "choices" not in data:
-            st.warning(f"API call failed (status {response.status_code}): {data.get('error', data)}")
+        if not resp .ok or "choices" not in data:
+            st.warning(f"API call failed (status {resp .status_code}): {data.get('error', data)}")
             text = ""   # or some default/filler
         else:
             # safe extraction
