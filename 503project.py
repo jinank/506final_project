@@ -23,34 +23,40 @@ r = st.sidebar.slider("Replicates per cell (r)", min_value=2, max_value=8, value
 run_button = st.sidebar.button("Run Experiment")
 
 if run_button:
+    # 2. Build design grid
+    t_low, t_high = temps
+    k_low, k_high = topk_levels
+    p_low, p_high = topp_levels
+
+    grid = []
+    for T in (t_low, t_high):
+        for K in (k_low, k_high):
+            for P in (p_low, p_high):
+                for rep in range(1, r+1):
+                    grid.append({"Temperature": T, "TopK": K, "TopP": P, "Replicate": rep})
+    df = pd.DataFrame(grid)
+
+    # 3. Call LLM & compute Flesch
     st.info("Collecting responses… this may take a few minutes.")
     flesch_scores = []
-    progress_bar = st.progress(0)
-    total = len(df)
-
-    for i, row in df.iterrows():
-        # API call
+    for _, row in stqdm(df.iterrows(), total=len(df)):
         payload = {
             "model": "gemini-1.5",
             "messages": [
-                {"role":"system","content":"You are a readability-focused assistant."},
-                {"role":"user",  "content":"Explain how factorial experiments help in tuning AI hyperparameters."}
+                {"role": "system", "content": "You are a readability-focused assistant."},
+                {"role": "user",   "content": "Explain how factorial experiments help in tuning AI hyperparameters."}
             ],
             "temperature": row.Temperature,
-            "top_p":       row.TopP,
-            "top_k":       row.TopK,
-            "max_tokens":  200
+            "top_p": row.TopP,
+            "top_k": row.TopK,
+            "max_tokens": 200
         }
         headers = {"Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}"}
         r = requests.post("https://api.openai.com/v1/chat/completions",
                           headers=headers, json=payload)
         text = r.json()["choices"][0]["message"]["content"]
-
-        # compute Flesch
-        flesch_scores.append(flesch_reading_ease(text))
-
-        # update progress
-        progress_bar.progress((i + 1) / total)
+        rd = Readability(text)
+        flesch_scores.append(rd.flesch().score)
 
     df["Flesch"] = flesch_scores
 
