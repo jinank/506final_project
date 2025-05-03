@@ -11,5 +11,5 @@ numpy
 scipy
 statsmodels
 textblob
-wordcloud
-readability 
+wordcloud 
+textstat
