@@ -1,4 +1,14 @@
-streamlit
 pandas
+plotly
+streamlit
 matplotlib
-seaborn
+statsmodels
+yfinance
+pandas-datareader
+prophet
+seaborn 
+numpy
+scipy
+statsmodels
+textblob
+wordcloud
