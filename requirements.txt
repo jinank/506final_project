@@ -13,7 +13,3 @@ statsmodels
 textblob
 wordcloud 
 textstat
-httr
-jsonlite
-quanteda
-emmeans
