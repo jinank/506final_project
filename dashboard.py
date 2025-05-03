@@ -97,7 +97,32 @@ def analyze_sentiment_by_county(df, county_column):
 
 def create_wordcloud_plot(text):
     """Create a WordCloud visualization"""
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+    
+    # Define phrase frequencies
+    phrase_counts = Counter({
+        "Painful": 138,
+        "Too Many Shots at once": 124,
+        "Too Many Vaccines Under 2 Years Old": 109,
+        "Causes Fever": 109,
+        "Learning Disability": 91,
+        "Safety Concerns": 138,
+        "Causes Chronic Illness": 44,
+        "Lack of Benefit": 23,
+        "Vaccine Unavailable": 33,
+        "Disease isn't Serious": 23,
+        "No Concerns": 88
+    })
+    
+    # Create the word cloud with mixed orientations
+    wordcloud = WordCloud(
+        width=800,
+        height=400,
+        background_color='white',
+        prefer_horizontal=0.5,  # 60% horizontal, 40% vertical
+        collocations=False      # Keep phrases intact
+    ).generate_from_frequencies(phrase_counts)
+
+    #wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.imshow(wordcloud, interpolation='bilinear')
     ax.axis('off')
@@ -761,6 +786,7 @@ elif page == "Text Analysis":
     
     # Generate word cloud for all county names
     country_text = ' '.join(df['county_name'].astype(str))
+    
     wordcloud_fig = create_wordcloud_plot(country_text)
     st.pyplot(wordcloud_fig)
     
