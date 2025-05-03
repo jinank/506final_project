@@ -13,3 +13,4 @@ statsmodels
 textblob
 wordcloud 
 textstat
+stqdm
