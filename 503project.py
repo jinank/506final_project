@@ -67,9 +67,9 @@ if run_button:
             text = data["choices"][0].get("message", {}).get("content", "")
 
         #text = r.json()["choices"][0]["message"]["content"]
-        rd = Readability(text)
-                # compute Flesch
+        from textstat import flesch_reading_ease
         flesch_scores.append(flesch_reading_ease(text))
+
 
         # update progress
         progress_bar.progress((i + 1) / total)
