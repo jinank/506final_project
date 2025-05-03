@@ -12,8 +12,3 @@ scipy
 statsmodels
 textblob
 wordcloud
-httr
-jsonlite
-quanteda
-readability
-emmeans
