@@ -12,3 +12,4 @@ scipy
 statsmodels
 textblob
 wordcloud
+readability
