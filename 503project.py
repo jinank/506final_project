@@ -57,7 +57,16 @@ if run_button:
         headers = {"Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}"}
         r = requests.post("https://api.openai.com/v1/chat/completions",
                           headers=headers, json=payload)
-        text = r.json()["choices"][0]["message"]["content"]
+        data = response.json()
+        # check for errors
+        if not response.ok or "choices" not in data:
+            st.warning(f"API call failed (status {response.status_code}): {data.get('error', data)}")
+            text = ""   # or some default/filler
+        else:
+            # safe extraction
+            text = data["choices"][0].get("message", {}).get("content", "")
+
+        #text = r.json()["choices"][0]["message"]["content"]
         rd = Readability(text)
                 # compute Flesch
         flesch_scores.append(flesch_reading_ease(text))
