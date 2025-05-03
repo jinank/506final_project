@@ -39,7 +39,10 @@ if run_button:
     # 3. Call LLM & compute Flesch
     st.info("Collecting responses… this may take a few minutes.")
     flesch_scores = []
-    for _, row in stqdm(df.iterrows(), total=len(df)):
+    progress_bar = st.progress(0)
+    total = len(df)
+
+    for i, row in df.iterrows():
         payload = {
             "model": "gemini-1.5",
             "messages": [
@@ -56,7 +59,11 @@ if run_button:
                           headers=headers, json=payload)
         text = r.json()["choices"][0]["message"]["content"]
         rd = Readability(text)
-        flesch_scores.append(rd.flesch().score)
+                # compute Flesch
+        flesch_scores.append(flesch_reading_ease(text))
+
+        # update progress
+        progress_bar.progress((i + 1) / total)
 
     df["Flesch"] = flesch_scores
 
