@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 import requests, json
-from readability import Readability
+from textstat import flesch_reading_ease
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 import matplotlib.pyplot as plt
@@ -55,8 +55,8 @@ if run_button:
         r = requests.post("https://api.openai.com/v1/chat/completions",
                           headers=headers, json=payload)
         text = r.json()["choices"][0]["message"]["content"]
-        rd = Readability(text)
-        flesch_scores.append(rd.flesch().score)
+        flesch_scores.append(flesch_reading_ease(text))
+
 
     df["Flesch"] = flesch_scores
 
