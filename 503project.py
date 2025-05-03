@@ -55,7 +55,7 @@ if run_button:
             "max_tokens": 200
         }
         headers = {"Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}"}
-        r = requests.post("https://api.openai.com/v1/chat/completions",
+        response = requests.post("https://api.openai.com/v1/chat/completions",
                           headers=headers, json=payload)
         data = response.json()
         # check for errors
