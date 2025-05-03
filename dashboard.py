@@ -17,7 +17,7 @@ import io
 
 # Set page config
 st.set_page_config(
-    page_title="Arizona ASD & Vaccine Exemptions Analysis",
+    page_title="Autism Rates & Vaccination Exemption",
     page_icon="📊",
     layout="wide"
 )
@@ -104,7 +104,7 @@ def create_wordcloud_plot(text):
     return fig
 
 # Add title and description
-st.title("Diagnosing Disparity: Autism and Vaccine Exemptions in Arizona")
+st.title("Autism Rates & Vaccination Exemption")
 st.markdown("""
 This interactive dashboard explores the relationship between Autism Spectrum Disorder (ASD) prevalence 
 and vaccination exemption rates across Arizona counties.
