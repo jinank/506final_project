@@ -6,7 +6,7 @@ import seaborn as sns
 # Load the cleaned and merged dataset
 @st.cache_data
 def load_data():
-    url = "https://raw.githubusercontent.com/jinankthakker/public-data/main/arizona_autism_exemptions.csv"  # Placeholder
+    url = "arizona_autism_exemptions.csv"  # Placeholder
     df = pd.read_csv(url)
     return df
 
