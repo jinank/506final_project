@@ -24,7 +24,6 @@ run_button = st.sidebar.button("Run Experiment")
 if run_button:
     # 2. Build design grid
     t_low, t_high = temps
-    k_low, k_high = topk_levels
     p_low, p_high = topp_levels
 
     grid = []
