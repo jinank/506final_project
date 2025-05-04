@@ -16,7 +16,7 @@ st.title("2 Factorial Design: LLM Readability Explorer")
 
 # 1. Sidebar: experiment settings
 st.sidebar.header("Experiment Settings")
-temps = st.sidebar.selectbox("Temperature levels", options=[(0.2,0.5,0.8)], format_func=lambda x: f"{x[0]} / {x[1]}/ {x[2]}")
+temps = st.sidebar.selectbox("Temperature levels", options=[(0.2,0.8)], format_func=lambda x: f"{x[0]} / {x[1]}")
 topp_levels = st.sidebar.selectbox("Top-p levels", options=[(0.1,0.9)], format_func=lambda x: f"{x[0]} / {x[1]}")
 r = st.sidebar.slider("Replicates per cell (r)", min_value=2, max_value=8, value=4)
 
@@ -24,7 +24,7 @@ run_button = st.sidebar.button("Run Experiment")
 
 if run_button:
     # 2. Build design grid
-    t_low, t_mid, t_high = temps
+    t_low, t_high = temps
     p_low, p_high = topp_levels
 
     grid = []
@@ -83,7 +83,7 @@ if run_button:
     st.download_button("Download CSV", data=csv, file_name="readability_data.csv")
 
     # 5. Fit 2³ ANOVA
-    df["Temperature"] = df["Temperature"].map({t_low:"low",t_mid:"mid", t_high:"high"})
+    df["Temperature"] = df["Temperature"].map({t_low:"low", t_high:"high"})
     df["TopP"] = df["TopP"].astype(str)
     model = ols("Flesch ~ C(Temperature)*C(TopP)", data=df).fit()
     import matplotlib.pyplot as plt
