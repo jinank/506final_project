@@ -16,7 +16,6 @@ st.title("2³ Factorial Design: LLM Readability Explorer")
 # 1. Sidebar: experiment settings
 st.sidebar.header("Experiment Settings")
 temps = st.sidebar.selectbox("Temperature levels", options=[(0.2,0.8)], format_func=lambda x: f"{x[0]} / {x[1]}")
-topk_levels = st.sidebar.selectbox("Top-k levels", options=[(10,100)], format_func=lambda x: f"{x[0]} / {x[1]}")
 topp_levels = st.sidebar.selectbox("Top-p levels", options=[(0.1,0.9)], format_func=lambda x: f"{x[0]} / {x[1]}")
 r = st.sidebar.slider("Replicates per cell (r)", min_value=2, max_value=8, value=4)
 
@@ -29,12 +28,12 @@ if run_button:
     p_low, p_high = topp_levels
 
     grid = []
-    for T in (t_low, t_high):
-        for K in (k_low, k_high):
-            for P in (p_low, p_high):
-                for rep in range(1, r+1):
-                    grid.append({"Temperature": T, "TopK": K, "TopP": P, "Replicate": rep})
+    for T in temps:
+        for P in topp_levels:
+            for rep in range(r):
+                grid.append({"Temperature": T, "TopP": P})
     df = pd.DataFrame(grid)
+
 
     # 3. Call LLM & compute Flesch
     st.info("Collecting responses… this may take a few minutes.")
@@ -45,14 +44,10 @@ if run_button:
     for i, row in df.iterrows():
         payload = {
             "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": "You are a readability-focused assistant."},
-                {"role": "user",   "content": "Explain how factorial experiments help in tuning AI hyperparameters."}
-            ],
+            "messages": [ ... ],
             "temperature": row.Temperature,
-            "top_p": row.TopP,
-            "top_k": row.TopK,
-            "max_tokens": 200
+            "top_p":       row.TopP,
+            "max_tokens":  200
         }
         headers = {"Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}"}
         resp  = requests.post("https://api.openai.com/v1/chat/completions",
