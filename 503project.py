@@ -16,8 +16,8 @@ st.title("2 Factorial Design: LLM Readability Explorer")
 
 # 1. Sidebar: experiment settings
 st.sidebar.header("Experiment Settings")
-temps = st.sidebar.selectbox("Temperature levels", options=[(0.3,0.5,0.8)], format_func=lambda x: f"{x[0]} / {x[1]}")
-topp_levels = st.sidebar.selectbox("Top-p levels", options=[(0.2,0.9)], format_func=lambda x: f"{x[0]} / {x[1]}")
+temps = st.sidebar.selectbox("Temperature levels", options=[(0.2,0.5,0.8)], format_func=lambda x: f"{x[0]} / {x[1]/ {x[2]}")
+topp_levels = st.sidebar.selectbox("Top-p levels", options=[(0.1,0.9)], format_func=lambda x: f"{x[0]} / {x[1]}")
 r = st.sidebar.slider("Replicates per cell (r)", min_value=2, max_value=8, value=4)
 
 run_button = st.sidebar.button("Run Experiment")
