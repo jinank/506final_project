@@ -44,7 +44,7 @@ if run_button:
 
     for i, row in df.iterrows():
         payload = {
-            "model": "gemini-1.5",
+            "model": "gpt-4o-mini",
             "messages": [
                 {"role": "system", "content": "You are a readability-focused assistant."},
                 {"role": "user",   "content": "Explain how factorial experiments help in tuning AI hyperparameters."}
