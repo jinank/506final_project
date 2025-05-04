@@ -9,6 +9,7 @@ from statsmodels.formula.api import ols
 import matplotlib.pyplot as plt
 from io import StringIO
 
+
 st.set_page_config(page_title="2³ Factorial Readability Experiment", layout="wide")
 
 st.title("2 Factorial Design: LLM Readability Explorer")
@@ -85,6 +86,26 @@ if run_button:
     df["Temperature"] = df["Temperature"].map({t_low:"low", t_high:"high"})
     df["TopP"] = df["TopP"].astype(str)
     model = ols("Flesch ~ C(Temperature)*C(TopP)", data=df).fit()
+    import matplotlib.pyplot as plt
+    import statsmodels.api as sm
+    
+    # Diagnostic plots
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    
+    # (a) Residuals vs. Fitted
+    axes[0].scatter(model.fittedvalues, model.resid)
+    axes[0].axhline(0, linestyle='--', linewidth=1)
+    axes[0].set_xlabel("Fitted values")
+    axes[0].set_ylabel("Residuals")
+    axes[0].set_title("Residuals vs. Fitted")
+    
+    # (b) Normal Q–Q plot
+    sm.qqplot(model.resid, line="45", ax=axes[1])
+    axes[1].set_title("Normal Q–Q")
+    
+    st.subheader("Diagnostic Plots")
+    st.pyplot(fig)
+
     anova_table = sm.stats.anova_lm(model, typ=2)
 
     st.subheader("ANOVA Table")
