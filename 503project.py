@@ -42,12 +42,16 @@ if run_button:
 
     for i, row in df.iterrows():
         payload = {
-            "model": "gpt-4o-mini",
-            "messages": [ ... ],
-            "temperature": row.Temperature,
-            "top_p":       row.TopP,
-            "max_tokens":  200
-        }
+        "model": "gpt-4o-mini",
+        "messages": [
+            {"role":"system","content":"You are a readability-focused assistant."},
+            {"role":"user",  "content":"Explain how factorial experiments help in tuning AI hyperparameters."}
+        ],
+        "temperature": float(row["Temperature"]),
+        "top_p":       float(row["TopP"]),
+        # "top_k": float(row["TopK"]),  # include only if using Top-k
+        "max_tokens":  200
+        }    
         headers = {"Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}"}
         resp  = requests.post("https://api.openai.com/v1/chat/completions",
                           headers=headers, json=payload)
