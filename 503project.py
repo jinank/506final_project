@@ -11,7 +11,7 @@ from io import StringIO
 
 st.set_page_config(page_title="2³ Factorial Readability Experiment", layout="wide")
 
-st.title("2³ Factorial Design: LLM Readability Explorer")
+st.title("2 Factorial Design: LLM Readability Explorer")
 
 # 1. Sidebar: experiment settings
 st.sidebar.header("Experiment Settings")
