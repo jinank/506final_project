@@ -83,9 +83,8 @@ if run_button:
 
     # 5. Fit 2³ ANOVA
     df["Temperature"] = df["Temperature"].map({t_low:"low", t_high:"high"})
-    df["TopK"] = df["TopK"].astype(str)
     df["TopP"] = df["TopP"].astype(str)
-    model = ols("Flesch ~ C(Temperature)*C(TopK)*C(TopP)", data=df).fit()
+    model = ols("Flesch ~ C(Temperature)*C(TopP)", data=df).fit()
     anova_table = sm.stats.anova_lm(model, typ=2)
 
     st.subheader("ANOVA Table")
