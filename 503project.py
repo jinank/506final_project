@@ -90,12 +90,22 @@ if run_button:
     st.subheader("ANOVA Table")
     st.table(anova_table)
 
-    # 6. Diagnostic plots
-    st.subheader("Diagnostic Plots")
-    fig = plt.figure(figsize=(12,6))
-    sm.graphics.plot_regress_exog(model, "C(Temperature)[T.high]", fig=fig)
-    st.pyplot(fig)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
+    # (a) Residuals vs. Fitted
+    axes[0].scatter(model3.fittedvalues, model3.resid)
+    axes[0].axhline(0, linestyle='--', linewidth=1)
+    axes[0].set_xlabel("Fitted values")
+    axes[0].set_ylabel("Residuals")
+    axes[0].set_title("Residuals vs. Fitted")
+    
+    # (b) Normal Q–Q plot
+    sm.qqplot(model3.resid, line="45", ax=axes[1])
+    axes[1].set_title("Normal Q–Q")
+    
+    st.subheader("Diagnostic Plots")
+    st.pyplot(fig)
+    
     # 7. Interaction plot
     st.subheader("Interaction: Temperature × TopP")
     fig2, ax2 = plt.subplots()
