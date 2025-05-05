@@ -36,7 +36,7 @@ if run:
     # Build 2×3×2 grid
     grid = []
     for T in np.linspace(temps[0], temps[1], 2):
-        for P in [topp[0], topp[1]]:
+        for P in np.linspace(topp[0], topp[1], 2):       
             for K in np.linspace(topk[0], topk[1], 2, dtype=int):
                 for rep in range(r):
                     grid.append({
