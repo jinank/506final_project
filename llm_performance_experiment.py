@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 st.set_page_config(layout="wide")
-st.title("2×3×2 Factorial: LLM Readability Explorer")
+st.title("LLM Hyperparameters Experiment")
 
 # Sidebar: settings
 st.sidebar.header("Experiment Settings")
