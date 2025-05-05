@@ -110,7 +110,7 @@ if run:
     st.dataframe(anova)
 
     # Diagnostic plots
-     st.subheader("Diagnostics")
+    st.subheader("Diagnostics")
     fig, axes = plt.subplots(1, 2, figsize=(10,4))
     axes[0].scatter(model.fittedvalues, model.resid)
     axes[0].axhline(0, linestyle="--", color="gray")
