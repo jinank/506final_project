@@ -158,7 +158,3 @@ if run:
     )
     st.pyplot(cat_box.fig)
 
-    ax3.set_title("Flesch Scores by Top-p and Temperature\n(faceted by Top-k)")
-    ax3.set_xlabel("Top-p")
-    ax3.set_ylabel("Flesch Score")
-    st.pyplot(fig3)
