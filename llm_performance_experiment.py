@@ -33,17 +33,13 @@ r = st.sidebar.slider(
 run = st.sidebar.button("Run Experiment")
 
 if run:
-    # Build 2×3×2 grid
+    # 1) Build full 2×2×2×r design
     grid = []
-    for T in np.linspace(temps[0], temps[1], 2):
-        for P in np.linspace(topp[0], topp[1], 2):       
-            for K in np.linspace(topk[0], topk[1], 2, dtype=int):
+    for T in [temps[0], temps[1]]:
+        for P in [topp[0], topp[1]]:
+            for K in [topk[0], topk[1]]:
                 for rep in range(r):
-                    grid.append({
-                        "Temperature": T,
-                        "TopP": P,
-                        "TopK": K
-                    })
+                    grid.append({"Temperature": T, "TopP": P, "TopK": K})
     df = pd.DataFrame(grid)
     df["Flesch"] = np.nan
 
@@ -114,7 +110,7 @@ if run:
     st.dataframe(anova)
 
     # Diagnostic plots
-    st.subheader("Diagnostics")
+     st.subheader("Diagnostics")
     fig, axes = plt.subplots(1, 2, figsize=(10,4))
     axes[0].scatter(model.fittedvalues, model.resid)
     axes[0].axhline(0, linestyle="--", color="gray")
@@ -123,7 +119,7 @@ if run:
     axes[1].set_title("Normal Q–Q")
     st.pyplot(fig)
 
-        # Interaction plot faceted by TopK using catplot
+    # 7) Interaction plot faceted by TopK
     st.subheader("Interaction Plot (faceted by Top-k)")
     cat_int = sns.catplot(
         data=df,
@@ -140,7 +136,7 @@ if run:
     cat_int.fig.suptitle("Temperature × Top-p Interaction by Top-k", y=1.02)
     st.pyplot(cat_int.fig)
 
-    # Box plot faceted by TopK
+    # 8) Box plot faceted by TopK
     st.subheader("Boxplot: Flesch by Top-p, Temperature & Top-k")
     cat_box = sns.catplot(
         data=df,
@@ -157,4 +153,5 @@ if run:
         y=1.02
     )
     st.pyplot(cat_box.fig)
+
 
