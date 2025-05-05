@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 st.set_page_config(layout="wide")
-st.title("2×3 Factorial: LLM Readability Explorer")
+st.title("2×3×2 Factorial: LLM Readability Explorer")
 
 # Sidebar: settings
 st.sidebar.header("Experiment Settings")
@@ -22,6 +22,10 @@ topp = st.sidebar.slider(
     "Top-p (low ↔ high)",
     0.0, 1.0, (0.3, 0.9), step=0.1
 )
+topk = st.sidebar.slider(
+    "Top-k (low ↔ high)",
+    1, 200, (10, 100), step=1
+)
 r = st.sidebar.slider(
     "Replicates per cell (r)",
     2, 8, 5, step=1
@@ -29,12 +33,17 @@ r = st.sidebar.slider(
 run = st.sidebar.button("Run Experiment")
 
 if run:
-    # Build grid: 2 levels of Temp, 3 levels of TopP
+    # Build 2×3×2 grid
     grid = []
     for T in np.linspace(temps[0], temps[1], 2):
         for P in np.linspace(topp[0], topp[1], 3):
-            for rep in range(r):
-                grid.append({"Temperature": T, "TopP": P})
+            for K in np.linspace(topk[0], topk[1], 2, dtype=int):
+                for rep in range(r):
+                    grid.append({
+                        "Temperature": T,
+                        "TopP": P,
+                        "TopK": K
+                    })
     df = pd.DataFrame(grid)
     df["Flesch"] = np.nan
 
@@ -55,6 +64,8 @@ if run:
             ],
             "temperature": float(row.Temperature),
             "top_p":       float(row.TopP),
+            # top_k isn’t supported by the chat endpoint, 
+            # so we record it as a factor only
             "max_tokens":  5000
         }
         resp = requests.post(
@@ -72,15 +83,31 @@ if run:
         progress.progress((i + 1) / len(df))
 
     # Convert to categorical for ANOVA
-    df["Temperature"] = pd.Categorical(df.Temperature, categories=sorted(df.Temperature.unique()), ordered=True)
-    df["TopP"]        = pd.Categorical(df.TopP,        categories=sorted(df.TopP.unique()),        ordered=True)
+    df["Temperature"] = pd.Categorical(
+        df.Temperature, 
+        categories=sorted(df.Temperature.unique()), 
+        ordered=True
+    )
+    df["TopP"] = pd.Categorical(
+        df.TopP, 
+        categories=sorted(df.TopP.unique()), 
+        ordered=True
+    )
+    df["TopK"] = pd.Categorical(
+        df.TopK, 
+        categories=sorted(df.TopK.unique()), 
+        ordered=True
+    )
 
     # Show raw data
     st.subheader("Raw Results")
     st.dataframe(df)
 
-    # Fit two‐factor ANOVA
-    model = ols("Flesch ~ C(Temperature) * C(TopP)", data=df).fit()
+    # Fit three‐factor ANOVA
+    model = ols(
+        "Flesch ~ C(Temperature) * C(TopP) * C(TopK)", 
+        data=df
+    ).fit()
     anova = sm.stats.anova_lm(model, typ=2)
 
     st.subheader("ANOVA Table")
@@ -96,27 +123,27 @@ if run:
     axes[1].set_title("Normal Q–Q")
     st.pyplot(fig)
 
-    # Interaction plot
-    st.subheader("Interaction Plot")
-    fig2, ax2 = plt.subplots(figsize=(6,4))
-    means = df.groupby(["TopP","Temperature"])["Flesch"].mean().unstack()
-    means.plot(kind="line", marker="o", ax=ax2)
-    ax2.set_ylabel("Mean Flesch Score")
-    ax2.set_xlabel("Top-p")
+    # Interaction plot (for Temperature × Top-p at each TopK)
+    st.subheader("Interaction Plot (faceted by Top-k)")
+    fig2, ax2 = plt.subplots(figsize=(8,4))
+    sns.pointplot(
+        data=df, x="TopP", y="Flesch", hue="Temperature",
+        col="TopK", dodge=True, markers=["o","s"], ax=ax2
+    )
     ax2.set_title("Temperature × Top-p Interaction")
+    ax2.set_ylabel("Mean Flesch")
     st.pyplot(fig2)
 
-    # Box plot (box “hunter hunter”)
-    st.subheader("Boxplot: Flesch by Top-p & Temperature")
-    fig3, ax3 = plt.subplots(figsize=(6,4))
+    # Box plot
+    st.subheader("Boxplot: Flesch by Top-p, Temperature & Top-k")
+    fig3, ax3 = plt.subplots(figsize=(8,5))
     sns.boxplot(
-        x="TopP",
-        y="Flesch",
-        hue="Temperature",
-        data=df,
+        data=df, x="TopP", y="Flesch", 
+        hue="Temperature", 
+        col="TopK", 
         ax=ax3
     )
-    ax3.set_title("Flesch Readability Scores by Top-p and Temperature")
+    ax3.set_title("Flesch Scores by Top-p and Temperature\n(faceted by Top-k)")
     ax3.set_xlabel("Top-p")
     ax3.set_ylabel("Flesch Score")
     st.pyplot(fig3)
