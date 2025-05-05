@@ -138,7 +138,7 @@ if run:
         aspect=1
     )
     cat_int.fig.suptitle("Temperature × Top-p Interaction by Top-k", y=1.02)
-    st.pyplot(cat_int)
+    st.pyplot(cat_int.fig)
 
     # Box plot faceted by TopK
     st.subheader("Boxplot: Flesch by Top-p, Temperature & Top-k")
@@ -152,8 +152,8 @@ if run:
         height=4,
         aspect=1
     )
-    cat_box.fig.suptitle("Flesch Scores by Top-p and Temperature\n(faceted by Top-k)", y=1.02)
-    st.pyplot(cat_box)
+    cat_box.fig.suptitle("Flesch Scores by Top-p and Temperature (faceted by Top-k)", y=1.02)
+    st.pyplot(cat_box.fig)
 
     ax3.set_title("Flesch Scores by Top-p and Temperature\n(faceted by Top-k)")
     ax3.set_xlabel("Top-p")
