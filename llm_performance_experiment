@@ -1,0 +1,122 @@
+import os
+import streamlit as st
+import pandas as pd
+import requests
+import numpy as np
+from textstat import flesch_reading_ease
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+st.set_page_config(layout="wide")
+st.title("2×3 Factorial: LLM Readability Explorer")
+
+# Sidebar: settings
+st.sidebar.header("Experiment Settings")
+temps = st.sidebar.slider(
+    "Temperature (low ↔ high)",
+    0.0, 1.0, (0.2, 0.8), step=0.1
+)
+topp = st.sidebar.slider(
+    "Top-p (low ↔ high)",
+    0.0, 1.0, (0.3, 0.9), step=0.1
+)
+r = st.sidebar.slider(
+    "Replicates per cell (r)",
+    2, 8, 5, step=1
+)
+run = st.sidebar.button("Run Experiment")
+
+if run:
+    # Build grid: 2 levels of Temp, 3 levels of TopP
+    grid = []
+    for T in np.linspace(temps[0], temps[1], 2):
+        for P in np.linspace(topp[0], topp[1], 3):
+            for rep in range(r):
+                grid.append({"Temperature": T, "TopP": P})
+    df = pd.DataFrame(grid)
+    df["Flesch"] = np.nan
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        st.error("Set your OPENAI_API_KEY in the environment.")
+        st.stop()
+    headers = {"Authorization": f"Bearer {api_key}"}
+    progress = st.progress(0)
+
+    # Loop & collect
+    for i, row in df.iterrows():
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user",   "content": "Write a concise summary of the benefits of factorial experiments."}
+            ],
+            "temperature": float(row.Temperature),
+            "top_p":       float(row.TopP),
+            "max_tokens":  5000
+        }
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers=headers, json=payload
+        )
+        if resp.ok:
+            js = resp.json()
+            txt = js["choices"][0]["message"]["content"]
+        else:
+            txt = ""
+            st.warning(f"Run {i+1} failed: {resp.status_code}")
+
+        df.at[i, "Flesch"] = flesch_reading_ease(txt)
+        progress.progress((i + 1) / len(df))
+
+    # Convert to categorical for ANOVA
+    df["Temperature"] = pd.Categorical(df.Temperature, categories=sorted(df.Temperature.unique()), ordered=True)
+    df["TopP"]        = pd.Categorical(df.TopP,        categories=sorted(df.TopP.unique()),        ordered=True)
+
+    # Show raw data
+    st.subheader("Raw Results")
+    st.dataframe(df)
+
+    # Fit two‐factor ANOVA
+    model = ols("Flesch ~ C(Temperature) * C(TopP)", data=df).fit()
+    anova = sm.stats.anova_lm(model, typ=2)
+
+    st.subheader("ANOVA Table")
+    st.dataframe(anova)
+
+    # Diagnostic plots
+    st.subheader("Diagnostics")
+    fig, axes = plt.subplots(1, 2, figsize=(10,4))
+    axes[0].scatter(model.fittedvalues, model.resid)
+    axes[0].axhline(0, linestyle="--", color="gray")
+    axes[0].set_title("Residuals vs Fitted")
+    sm.qqplot(model.resid, line="45", ax=axes[1])
+    axes[1].set_title("Normal Q–Q")
+    st.pyplot(fig)
+
+    # Interaction plot
+    st.subheader("Interaction Plot")
+    fig2, ax2 = plt.subplots(figsize=(6,4))
+    means = df.groupby(["TopP","Temperature"])["Flesch"].mean().unstack()
+    means.plot(kind="line", marker="o", ax=ax2)
+    ax2.set_ylabel("Mean Flesch Score")
+    ax2.set_xlabel("Top-p")
+    ax2.set_title("Temperature × Top-p Interaction")
+    st.pyplot(fig2)
+
+    # Box plot (box “hunter hunter”)
+    st.subheader("Boxplot: Flesch by Top-p & Temperature")
+    fig3, ax3 = plt.subplots(figsize=(6,4))
+    sns.boxplot(
+        x="TopP",
+        y="Flesch",
+        hue="Temperature",
+        data=df,
+        ax=ax3
+    )
+    ax3.set_title("Flesch Readability Scores by Top-p and Temperature")
+    ax3.set_xlabel("Top-p")
+    ax3.set_ylabel("Flesch Score")
+    st.pyplot(fig3)
