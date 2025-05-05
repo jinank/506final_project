@@ -152,7 +152,10 @@ if run:
         height=4,
         aspect=1
     )
-    cat_box.fig.suptitle("Flesch Scores by Top-p and Temperature (faceted by Top-k)", y=1.02)
+    cat_box.fig.suptitle(
+        "Flesch Scores by Top-p and Temperature (faceted by Top-k)",
+        y=1.02
+    )
     st.pyplot(cat_box.fig)
 
     ax3.set_title("Flesch Scores by Top-p and Temperature\n(faceted by Top-k)")
