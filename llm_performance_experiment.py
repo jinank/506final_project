@@ -20,7 +20,7 @@ temps = st.sidebar.slider(
 )
 topp = st.sidebar.slider(
     "Top-p (low ↔ high)",
-    0.0, 1.0, (0.3, 0.9), step=0.1
+    0.0, 1.0, (0.1, 0.9), step=0.1
 )
 topk = st.sidebar.slider(
     "Top-k (low ↔ high)",
