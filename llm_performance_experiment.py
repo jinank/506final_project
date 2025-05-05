@@ -123,26 +123,38 @@ if run:
     axes[1].set_title("Normal Q–Q")
     st.pyplot(fig)
 
-    # Interaction plot (for Temperature × Top-p at each TopK)
+        # Interaction plot faceted by TopK using catplot
     st.subheader("Interaction Plot (faceted by Top-k)")
-    fig2, ax2 = plt.subplots(figsize=(8,4))
-    sns.pointplot(
-        data=df, x="TopP", y="Flesch", hue="Temperature",
-        col="TopK", dodge=True, markers=["o","s"], ax=ax2
+    cat_int = sns.catplot(
+        data=df,
+        x="TopP",
+        y="Flesch",
+        hue="Temperature",
+        col="TopK",
+        kind="point",
+        dodge=True,
+        markers=["o", "s"],
+        height=4,
+        aspect=1
     )
-    ax2.set_title("Temperature × Top-p Interaction")
-    ax2.set_ylabel("Mean Flesch")
-    st.pyplot(fig2)
+    cat_int.fig.suptitle("Temperature × Top-p Interaction by Top-k", y=1.02)
+    st.pyplot(cat_int)
 
-    # Box plot
+    # Box plot faceted by TopK
     st.subheader("Boxplot: Flesch by Top-p, Temperature & Top-k")
-    fig3, ax3 = plt.subplots(figsize=(8,5))
-    sns.boxplot(
-        data=df, x="TopP", y="Flesch", 
-        hue="Temperature", 
-        col="TopK", 
-        ax=ax3
+    cat_box = sns.catplot(
+        data=df,
+        x="TopP",
+        y="Flesch",
+        hue="Temperature",
+        col="TopK",
+        kind="box",
+        height=4,
+        aspect=1
     )
+    cat_box.fig.suptitle("Flesch Scores by Top-p and Temperature\n(faceted by Top-k)", y=1.02)
+    st.pyplot(cat_box)
+
     ax3.set_title("Flesch Scores by Top-p and Temperature\n(faceted by Top-k)")
     ax3.set_xlabel("Top-p")
     ax3.set_ylabel("Flesch Score")
