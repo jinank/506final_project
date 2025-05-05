@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 st.set_page_config(layout="wide")
-st.title("LLM Hyperparameters Experiment")
+st.title("LLM Hyperparameters Experiment - Study of LLM Hyperparameters and Readability ")
 
 # Sidebar: settings
 st.sidebar.header("Experiment Settings")
