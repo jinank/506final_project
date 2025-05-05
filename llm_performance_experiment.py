@@ -60,9 +60,7 @@ if run:
             ],
             "temperature": float(row.Temperature),
             "top_p":       float(row.TopP),
-            # top_k isn’t supported by the chat endpoint, 
             # so we record it as a factor only
-            "max_tokens":  5000
         }
         resp = requests.post(
             "https://api.openai.com/v1/chat/completions",
