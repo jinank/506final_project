@@ -14,5 +14,4 @@ textblob
 wordcloud 
 textstat
 stqdm
-sklearn
 scikit-learn
