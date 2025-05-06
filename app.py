@@ -110,7 +110,7 @@ else:
                 
                 # Calculating the Required Run-Rate for the batting team to win
                 requiredrunrate = (runs_left*6)/balls_left
-                               
+
                 # Creating a pandas DataFrame containing the user inputs
                 input_df = pd.DataFrame(
                                {'batting_team': [battingteam], 
@@ -118,6 +118,7 @@ else:
                                 'city': [city], 
                                 'runs_left': [runs_left], 
                                 'balls_left': [balls_left],
+                                'wickets_left': [wickets], 
                                 'wickets': [wickets], 
                                 'total_runs_x': [target], 
                                 'cur_run_rate': [currentrunrate], 
