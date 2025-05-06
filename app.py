@@ -86,8 +86,7 @@ elif wickets==10 and score == target-1:
     st.write('Match tied')
     
 elif battingteam==bowlingteam:
-    st.write('To proceed, please select different teams because no match can be 
-              played between the same teams')
+    st.write('To proceed, please select different teams because no match can be played between the same teams')
 
 else:
 
@@ -146,5 +145,4 @@ else:
             
     #Displaying an error message if the input is incorrect        
     else:
-        st.error('There is something wrong with the input, 
-                  please fill the correct details')
+        st.error('There is something wrong with the input, please fill the correct details')
