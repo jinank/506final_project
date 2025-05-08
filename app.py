@@ -29,7 +29,7 @@ cities = ['Hyderabad', 'Bangalore', 'Mumbai', 'Indore', 'Kolkata', 'Delhi',
 
 # Loading our machine learning model from a saved pickle file
 
-pipe = pickle.load(open('pipe.pkl', 'rb')) #remember all folders including pipe.pkl,
+pipe = pickle.load(open('pipe.pkl', 'rb')) #remember all folders including pipe.pkl
 # notebook, datasets exist in the same directory
 
 # Setting up the app's title
