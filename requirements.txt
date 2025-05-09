@@ -15,3 +15,5 @@ wordcloud
 textstat
 stqdm
 scikit-learn
+xgboost
+joblib
