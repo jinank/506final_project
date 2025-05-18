@@ -11,15 +11,29 @@ class FriendPattern:
         self.last_two: List[str] = []
 
     def record_hand(self, outcome: str):
-        # track last two outcomes
+        # special handling for single-win patterns
+        if self.pattern_type == 'banker_only':
+            if outcome == 'B':
+                # immediate hit on banker outcome
+                self.miss_count = 0
+                self.step = 0
+            else:
+                # count misses when not banker
+                self.miss_count += 1
+                self.step = min(self.miss_count, 11)
+            return
+
+        # track last two outcomes for Star 2.0 patterns
         self.last_two.append(outcome)
         if len(self.last_two) > 2:
             self.last_two.pop(0)
         # update pattern misses and step for Star 2.0
         if len(self.last_two) == 2 and self.last_two[0] == self.last_two[1]:
+            # back-to-back win: reset counters
             self.miss_count = 0
             self.step = 0
         else:
+            # increment miss count and advance step
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
 
@@ -36,48 +50,22 @@ class FriendPattern:
             'banker_only': 'B',
             'player_only': 'P',
             'alternator_start_banker': ['B','P'],
-            # ... fill other patterns ...
+            'alternator_start_player': ['P','B'],
+            'terrific_twos': ['B','P','P'],
+            'chop': ['P','B'],
+            'follow_last': None,   # will choose last hand dynamically
+            'three_pattern': None, # custom logic needed
+            'one_two_one': None,
+            'two_three_two': None
         }
-        pattern = choices.get(self.pattern_type)
-        if isinstance(pattern, list):
-            return pattern[self.miss_count % len(pattern)]
-        return pattern or 'B'
-
-
-class Session:
-    def __init__(self):
-        self.unit = 10.0
-        self.history: List[str] = []
-        self.friends: List[FriendPattern] = []
-        self.strategy = 'conservative'
-        self.reset_patterns()
-
-    def reset_patterns(self):
-        types = [
-            'banker_only', 'player_only', 'alternator_start_banker',
-            'alternator_start_player', 'terrific_twos', 'chop',
-            'follow_last', 'three_pattern', 'one_two_one', 'two_three_two'
-        ]
-        self.friends = [FriendPattern(f'Friend {i+1}', types[i]) for i in range(10)]
-        self.history = []
-
-    def add_hand(self, outcome: str):
-        self.history.append(outcome)
-        for friend in self.friends:
-            friend.record_hand(outcome)
-
-    def get_state(self) -> List[Dict]:
-        state = []
-        for friend in self.friends:
-            state.append({
-                'name': friend.name,
-                'pattern': friend.pattern_type,
-                'misses': friend.miss_count,
-                'next_bet': friend.next_bet_choice(),
-                'bet_amount': friend.next_bet_amount(self.unit),
-                'hit': friend.step == 0
-            })
-        return state
+        choice = choices.get(self.pattern_type)
+        if self.pattern_type == 'follow_last' and self.last_two:
+            return self.last_two[-1]
+        # fallback for patterns defined as lists
+        if isinstance(choice, list):
+            return choice[self.miss_count % len(choice)]
+        # default for single-value patterns or fallback
+        return choice or 'B'
 
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
