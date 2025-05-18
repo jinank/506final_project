@@ -15,8 +15,8 @@ if 'friends' not in st.session_state:
     st.session_state.friends = {
         "Friend 1": {'pattern': 'banker', 'misses': 0, 'last_result': '', 'win_streak': 0},
         "Friend 2": {'pattern': 'player', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 3": {'pattern': 'alternate_b_start', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 4": {'pattern': 'alternate_p_start', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 3": {'pattern': 'bp_alternate', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 4": {'pattern': 'pb_alternate', 'misses': 0, 'last_result': '', 'win_streak': 0},
         "Friend 5": {'pattern': 'twos', 'misses': 0, 'last_result': '', 'win_streak': 0},
         "Friend 6": {'pattern': 'chop', 'misses': 0, 'last_result': '', 'win_streak': 0},
         "Friend 7": {'pattern': 'follow', 'misses': 0, 'last_result': '', 'win_streak': 0},
@@ -29,9 +29,9 @@ if 'friends' not in st.session_state:
 def get_expected_bet(friend_name, history):
     pattern = st.session_state.friends[friend_name]['pattern']
     if not history:
-        if pattern in ['alternate_b_start', 'alternate']:
+        if pattern in ['bp_alternate', 'alternate']:
             return 'B'
-        elif pattern == 'alternate_p_start':
+        elif pattern == 'pb_alternate':
             return 'P'
         return None
         if pattern == 'alt_start_b':
@@ -48,7 +48,7 @@ def get_expected_bet(friend_name, history):
         return 'B' if len(history) % 2 == 0 else 'P'
     elif pattern == 'alt_start_p':
         return 'P' if len(history) % 2 == 0 else 'B'
-    elif pattern == 'alternate_b_start':
+    elif pattern == 'bp_alternate':
         return 'B' if len(history) % 2 == 0 else 'P'
     elif pattern == 'chop':
         return 'P' if last == 'B' else 'B'
