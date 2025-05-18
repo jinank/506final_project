@@ -13,7 +13,7 @@ if st.sidebar.button("🔄 Reset Session"):
     st.session_state.initial_balance = 1000
     st.session_state.stop_loss = 800
     st.session_state.win_goal = 1200
-    st.experimental_rerun()
+    st.rerun()
 
 # Initialize session variables if not already set
 if 'history' not in st.session_state:
