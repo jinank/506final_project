@@ -5,7 +5,17 @@ import pandas as pd
 if st.sidebar.button("🔄 Reset Session"):
     st.session_state.history = []
     st.session_state.friends = {
-        f"Friend {i+1}": {'pattern': 'banker' if i == 0 else 'player' if i == 1 else 'alternate' if i == 2 else 'alt_start_p' if i == 3 else 'chop',
+        "Friend 1": {'pattern': 'banker', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 2": {'pattern': 'player', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 3": {'pattern': 'alternate', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 4": {'pattern': 'alt_start_p', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 5": {'pattern': 'twos', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 6": {'pattern': 'chop', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 7": {'pattern': 'follow', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 8": {'pattern': 'three_pattern', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 9": {'pattern': 'one_two_one', 'misses': 0, 'last_result': '', 'win_streak': 0},
+        "Friend 10": {'pattern': 'two_three_two', 'misses': 0, 'last_result': '', 'win_streak': 0},
+    }": {'pattern': 'banker' if i == 0 else 'player' if i == 1 else 'alternate' if i == 2 else 'alt_start_p' if i == 3 else 'chop',
                            'misses': 0, 'last_result': '', 'win_streak': 0}
         for i in range(10)
     }
@@ -36,8 +46,34 @@ if 'win_goal' not in st.session_state:
 # Betting logic per strategy
 def get_expected_bet(friend_name, history):
     pattern = st.session_state.friends[friend_name]['pattern']
+    if not history:
+        return None
+    last = history[-1]
     if pattern == 'banker':
         return 'B'
+    elif pattern == 'player':
+        return 'P'
+    elif pattern == 'alternate':
+        return 'B' if len(history) % 2 == 0 else 'P'
+    elif pattern == 'alt_start_p':
+        return 'P' if len(history) % 2 == 0 else 'B'
+    elif pattern == 'chop':
+        return 'P' if last == 'B' else 'B'
+    elif pattern == 'follow':
+        return last
+    elif pattern == 'twos':
+        seq = ['B', 'P', 'P', 'B', 'B', 'P', 'P', 'B', 'B']
+        return seq[len(history) % len(seq)]
+    elif pattern == 'three_pattern':
+        seq = ['B', 'B', 'P', 'P', 'P', 'B', 'B', 'B', 'P', 'P', 'P']
+        return seq[len(history) % len(seq)]
+    elif pattern == 'one_two_one':
+        seq = ['P', 'P', 'B', 'P', 'P', 'B', 'P', 'P', 'B']
+        return seq[len(history) % len(seq)]
+    elif pattern == 'two_three_two':
+        seq = ['P', 'B', 'B', 'B', 'P', 'P', 'B', 'B', 'B', 'P', 'P']
+        return seq[len(history) % len(seq)]
+    return 'B'
     elif pattern == 'player':
         return 'P'
     elif pattern == 'alternate':
