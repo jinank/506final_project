@@ -59,7 +59,7 @@ def get_preview(friend_name, history):
     for _ in range(preview_length):
         temp_history = history + preview
         preview.append(get_expected_bet(friend_name, temp_history))
-    return ''.join(preview)
+    return ''.join([p for p in preview if p is not None])
 
 friend_data = []
 for name, stats in st.session_state.friends.items():
