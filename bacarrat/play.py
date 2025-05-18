@@ -11,6 +11,7 @@ st.session_state.win_goal = st.sidebar.number_input("Win Goal Threshold", value=
 # Initialize session variables
 if 'history' not in st.session_state:
     st.session_state.history = []
+
 if 'friends' not in st.session_state:
     st.session_state.friends = {
         "Friend 1": {'pattern': 'banker', 'misses': 0, 'last_result': '', 'win_streak': 0},
@@ -34,11 +35,7 @@ def get_expected_bet(friend_name, history):
         elif pattern == 'pb_alternate':
             return 'P'
         return None
-        if pattern == 'alt_start_b':
-            return 'B'
-        elif pattern == 'alternate_p_start':
-            return 'P'
-        return None
+
     last = history[-1]
     if pattern == 'banker':
         return 'B'
@@ -46,10 +43,10 @@ def get_expected_bet(friend_name, history):
         return 'P'
     elif pattern == 'alternate':
         return 'B' if len(history) % 2 == 0 else 'P'
-    elif pattern == 'alt_start_p':
-        return 'P' if len(history) % 2 == 0 else 'B'
     elif pattern == 'bp_alternate':
-        return 'B' if len(history) % 2 == 0 else 'P'
+        return 'P' if last == 'B' else 'B'
+    elif pattern == 'pb_alternate':
+        return 'B' if last == 'P' else 'P'
     elif pattern == 'chop':
         return 'P' if last == 'B' else 'B'
     elif pattern == 'follow':
@@ -68,10 +65,10 @@ def get_expected_bet(friend_name, history):
         return seq[len(history) % len(seq)]
     return 'B'
 
-# Bet progression
+# Betting progression
 progression = [10, 15, 25, 25, 50, 50, 75, 100, 125, 175]
 
-# Game input
+# Result entry
 st.title("🎲 AI Baccarat Friend Tracker")
 result = st.radio("Enter result of hand:", ["Player (P)", "Banker (B)", "Skip"])
 if st.button("Submit Result"):
@@ -85,14 +82,14 @@ if st.button("Submit Result"):
             else:
                 st.session_state.friends[friend]['misses'] += 1
 
-# Reset all friend bets
+# Reset all friends
 if st.button("🔄 Reset All Friends"):
     for friend in st.session_state.friends:
         st.session_state.friends[friend]['misses'] = 0
         st.session_state.friends[friend]['last_result'] = ''
         st.session_state.friends[friend]['win_streak'] = 0
 
-# Friend tracker table
+# Friend tracker
 st.subheader("Friend Miss Tracker")
 friend_data = []
 for name, stats in st.session_state.friends.items():
@@ -100,27 +97,28 @@ for name, stats in st.session_state.friends.items():
     misses = stats['misses']
     amount = progression[misses] if misses < len(progression) else progression[-1]
     friend_data.append({
-        'Pattern': stats['pattern'],
         'Friend': name,
+        'Pattern': stats['pattern'],
         'Expected Bet': expected,
         'Misses': misses,
         'Next Bet Amount ($)': amount
     })
+
 friend_df = pd.DataFrame(friend_data)
 st.dataframe(friend_df.style.apply(lambda row: ['background-color: lightgreen' if row['Misses'] >= 5 else '' for _ in row], axis=1))
 
-# Recommendation
+# Recommended bet
 st.subheader("Recommended Bet")
 best = max(friend_data, key=lambda x: x['Misses'])
 if best['Misses'] >= 4:
     bet_amount = best['Next Bet Amount ($)']
-    st.success(f"Bet AGAINST {best['Friend']} — they expect {best['Expected Bet']}, have {best['Misses']} misses, bet amount: ${bet_amount}")
+    st.success(f"Bet AGAINST {best['Friend']} — expects {best['Expected Bet']}, has {best['Misses']} misses. Bet ${bet_amount}")
     if st.button("Apply Win"):
         st.session_state.balance += bet_amount
     if st.button("Apply Loss"):
         st.session_state.balance -= bet_amount
 else:
-    st.info("No friend has 4 or more misses. Wait for more hands.")
+    st.info("No friend has 4+ misses. Take a free hand.")
 
 # Balance tracker
 st.subheader("Session Status")
@@ -130,4 +128,4 @@ st.metric("Win Goal Target", f"${st.session_state.win_goal:.2f}")
 if st.session_state.balance <= st.session_state.stop_loss:
     st.error("❌ STOP LOSS hit! End session.")
 elif st.session_state.balance >= st.session_state.win_goal:
-    st.success("🎉 WIN GOAL reached! Well done.")
+    st.success("🎉 WIN GOAL reached! Congrats.")
