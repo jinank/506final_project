@@ -149,5 +149,10 @@ st.write(' '.join(session.history))
 # Summary
 st.write('### Summary')
 state = session.get_state()
-total_bet = sum(item['Bet Amount'] for item in state)
+# Calculate total amount needed safely
+try:
+    total_bet = sum(item.get('Bet Amount', 0) for item in state)
+except Exception as e:
+    total_bet = 0
+    st.error(f"Error calculating total bet: {e}")
 st.write(f'Total needed for 12 steps: {total_bet}')
