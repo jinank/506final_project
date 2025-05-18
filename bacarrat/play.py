@@ -100,6 +100,7 @@ for name, stats in st.session_state.friends.items():
     misses = stats['misses']
     amount = progression[misses] if misses < len(progression) else progression[-1]
     friend_data.append({
+        'Pattern': stats['pattern'],
         'Friend': name,
         'Expected Bet': expected,
         'Misses': misses,
