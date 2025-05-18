@@ -109,6 +109,7 @@ class Session:
             })
         return state
 
+
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
 session = st.session_state.get('game')
