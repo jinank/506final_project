@@ -1,102 +1,122 @@
 import streamlit as st
-import pandas as pd
+from typing import List, Dict
 
-# Session Settings Sidebar
-st.sidebar.header("Session Settings")
-st.session_state.initial_balance = st.sidebar.number_input("Initial Balance", value=st.session_state.initial_balance if 'initial_balance' in st.session_state else 1000)
-st.session_state.balance = st.sidebar.number_input("Current Balance", value=st.session_state.balance if 'balance' in st.session_state else 1000)
-st.session_state.stop_loss = st.sidebar.number_input("Stop Loss Threshold", value=st.session_state.stop_loss if 'stop_loss' in st.session_state else 800)
-st.session_state.win_goal = st.sidebar.number_input("Win Goal Threshold", value=st.session_state.win_goal if 'win_goal' in st.session_state else 1200)
+# --- Data Models ---
+class FriendPattern:
+    def __init__(self, name: str, pattern_type: str):
+        self.name = name
+        self.pattern_type = pattern_type
+        self.miss_count = 0
+        self.step = 0
+        self.last_two: List[str] = []
 
-# Initialize session variables
-if 'history' not in st.session_state:
-    st.session_state.history = []
-if 'friends' not in st.session_state:
-    st.session_state.friends = {
-        "Friend 1": {'pattern': 'banker', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 2": {'pattern': 'player', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 3": {'pattern': 'bp_alternate', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 4": {'pattern': 'pb_alternate', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 5": {'pattern': 'twos', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 6": {'pattern': 'chop', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 7": {'pattern': 'follow', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 8": {'pattern': 'three_pattern', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 9": {'pattern': 'one_two_one', 'misses': 0, 'last_result': '', 'win_streak': 0},
-        "Friend 10": {'pattern': 'two_three_two', 'misses': 0, 'last_result': '', 'win_streak': 0},
-    }
+    def record_hand(self, outcome: str):
+        # track last two outcomes
+        self.last_two.append(outcome)
+        if len(self.last_two) > 2:
+            self.last_two.pop(0)
+        # update pattern misses and step for Star 2.0
+        if len(self.last_two) == 2 and self.last_two[0] == self.last_two[1]:
+            self.miss_count = 0
+            self.step = 0
+        else:
+            self.miss_count += 1
+            self.step = min(self.miss_count, 11)
 
-# Betting strategy function
-preview_length = 5
+    def next_bet_amount(self, unit: float) -> float:
+        # Star 2.0 betting sequence base units
+        star_sequence = [unit, unit*1.5, unit*2.5, unit*4, unit*6.5,
+                         unit*10.5, unit*17, unit*27.5, unit*44.5,
+                         unit*72, unit*116, unit*188]
+        return star_sequence[self.step]
 
-def get_expected_bet(friend_name, history):
-    pattern = st.session_state.friends[friend_name]['pattern']
-    if not history:
-        if pattern == 'bp_alternate':
-            return 'B'
-        elif pattern == 'pb_alternate':
-            return 'P'
-        elif pattern == 'alternate':
-            return 'B'
-        return None
-    last = history[-1]
-    if pattern == 'banker':
-        return 'B'
-    elif pattern == 'player':
-        return 'P'
-    elif pattern == 'alternate':
-        return 'B' if len(history) % 2 == 0 else 'P'
-    elif pattern == 'alt_start_p':
-        return 'P' if len(history) % 2 == 0 else 'B'
-    elif pattern == 'bp_alternate':
-        seq = ['B', 'P']
-        return seq[len(history) % 2]
-    elif pattern == 'pb_alternate':
-        seq = ['P', 'B']
-        return seq[len(history) % 2]
+    def next_bet_choice(self) -> str:
+        # map pattern_type to bet choice
+        choices = {
+            'banker_only': 'B',
+            'player_only': 'P',
+            'alternator_start_banker': ['B','P'],
+            # ... fill other patterns ...
+        }
+        pattern = choices.get(self.pattern_type)
+        if isinstance(pattern, list):
+            return pattern[self.miss_count % len(pattern)]
+        return pattern or 'B'
 
-def get_preview(friend_name, history):
-    preview = []
-    for _ in range(preview_length):
-        temp_history = history + preview
-        preview.append(get_expected_bet(friend_name, temp_history))
-    return ''.join([p for p in preview if p is not None])
 
-friend_data = []
-for name, stats in st.session_state.friends.items():
-    expected = get_expected_bet(name, st.session_state.history)
-    misses = stats['misses']
-    preview = get_preview(name, st.session_state.history)
-    amount = [10, 15, 25, 25, 50, 50, 75, 100, 125, 175]
-    next_amount = amount[misses] if misses < len(amount) else amount[-1]
-    friend_data.append({
-        'Friend': name,
-        'Pattern': stats['pattern'],
-        'Expected Bet': expected,
-        'Misses': misses,
-        'Next Bet Amount ($)': next_amount,
-        'Preview (Next 5)': preview
-    })
+class Session:
+    def __init__(self):
+        self.unit = 10.0
+        self.history: List[str] = []
+        self.friends: List[FriendPattern] = []
+        self.strategy = 'conservative'
+        self.reset_patterns()
 
-# Per-friend reset buttons and streak chart
-st.subheader("Friend Actions")
-for friend in st.session_state.friends:
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.write(f"**{friend}** — Pattern: {st.session_state.friends[friend]['pattern']}, Misses: {st.session_state.friends[friend]['misses']}")
-    with col2:
-        if st.button(f"Reset {friend}"):
-            st.session_state.friends[friend]['misses'] = 0
-            st.session_state.friends[friend]['last_result'] = ''
-            st.session_state.friends[friend]['win_streak'] = 0
+    def reset_patterns(self):
+        types = [
+            'banker_only', 'player_only', 'alternator_start_banker',
+            'alternator_start_player', 'terrific_twos', 'chop',
+            'follow_last', 'three_pattern', 'one_two_one', 'two_three_two'
+        ]
+        self.friends = [FriendPattern(f'Friend {i+1}', types[i]) for i in range(10)]
+        self.history = []
 
-import matplotlib.pyplot as plt
-st.subheader("Miss Streaks Chart")
-plt.figure(figsize=(10, 4))
-plt.bar([f"F{i+1}" for i in range(10)], [st.session_state.friends[f"Friend {i+1}"]['misses'] for i in range(10)])
-plt.title("Current Miss Streaks by Friend")
-plt.xlabel("Friend")
-plt.ylabel("Misses")
-st.pyplot(plt)
+    def add_hand(self, outcome: str):
+        self.history.append(outcome)
+        for friend in self.friends:
+            friend.record_hand(outcome)
 
-friend_df = pd.DataFrame(friend_data)
-st.dataframe(friend_df.style.apply(lambda row: ['background-color: lightgreen' if row['Misses'] >= 5 else '' for _ in row], axis=1))
+    def get_state(self) -> List[Dict]:
+        state = []
+        for friend in self.friends:
+            state.append({
+                'name': friend.name,
+                'pattern': friend.pattern_type,
+                'misses': friend.miss_count,
+                'next_bet': friend.next_bet_choice(),
+                'bet_amount': friend.next_bet_amount(self.unit),
+                'hit': friend.step == 0
+            })
+        return state
+
+# --- Streamlit App ---
+st.set_page_config(layout='wide')
+session = st.session_state.get('game')
+if session is None:
+    session = Session()
+    st.session_state['game'] = session
+
+# Sidebar controls
+with st.sidebar:
+    st.title('Bakura Algorithm MVP')
+    session.unit = st.number_input('Unit Size', min_value=1.0, step=1.0, value=session.unit)
+    session.strategy = st.selectbox('Strategy', ['conservative', 'aggressive', 'end_of_shoe'])
+    if st.button('New Shoe'):
+        session.reset_patterns()
+
+# Main layout
+grid_data = session.get_state()
+st.write('### Next Bets & Miss Counts')
+st.table(grid_data)
+
+# Hand input buttons
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button('Record Banker'):
+        session.add_hand('B')
+with col2:
+    if st.button('Record Player'):
+        session.add_hand('P')
+with col3:
+    if st.button('Record Tie'):
+        session.add_hand('T')
+
+# Session history
+st.write('### Hand History')
+st.write(' '.join(session.history))
+
+# Profit/Loss and summary
+st.write('### Summary')
+state = session.get_state()
+total_bet = sum(item['bet_amount'] for item in state)
+st.write(f'Total needed for 12 steps: {total_bet}')
