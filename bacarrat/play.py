@@ -11,7 +11,6 @@ st.session_state.win_goal = st.sidebar.number_input("Win Goal Threshold", value=
 # Initialize session variables
 if 'history' not in st.session_state:
     st.session_state.history = []
-
 if 'friends' not in st.session_state:
     st.session_state.friends = {
         "Friend 1": {'pattern': 'banker', 'misses': 0, 'last_result': '', 'win_streak': 0},
@@ -27,15 +26,18 @@ if 'friends' not in st.session_state:
     }
 
 # Betting strategy function
+preview_length = 5
+
 def get_expected_bet(friend_name, history):
     pattern = st.session_state.friends[friend_name]['pattern']
     if not history:
-        if pattern in ['bp_alternate', 'alternate']:
+        if pattern == 'bp_alternate':
             return 'B'
         elif pattern == 'pb_alternate':
             return 'P'
+        elif pattern == 'alternate':
+            return 'B'
         return None
-
     last = history[-1]
     if pattern == 'banker':
         return 'B'
@@ -43,89 +45,58 @@ def get_expected_bet(friend_name, history):
         return 'P'
     elif pattern == 'alternate':
         return 'B' if len(history) % 2 == 0 else 'P'
+    elif pattern == 'alt_start_p':
+        return 'P' if len(history) % 2 == 0 else 'B'
     elif pattern == 'bp_alternate':
-        return 'P' if last == 'B' else 'B'
+        seq = ['B', 'P']
+        return seq[len(history) % 2]
     elif pattern == 'pb_alternate':
-        return 'B' if last == 'P' else 'P'
-    elif pattern == 'chop':
-        return 'P' if last == 'B' else 'B'
-    elif pattern == 'follow':
-        return last
-    elif pattern == 'twos':
-        seq = ['B', 'P', 'P', 'B', 'B', 'P', 'P', 'B', 'B']
-        return seq[len(history) % len(seq)]
-    elif pattern == 'three_pattern':
-        seq = ['B', 'B', 'P', 'P', 'P', 'B', 'B', 'B', 'P', 'P', 'P']
-        return seq[len(history) % len(seq)]
-    elif pattern == 'one_two_one':
-        seq = ['P', 'P', 'B', 'P', 'P', 'B', 'P', 'P', 'B']
-        return seq[len(history) % len(seq)]
-    elif pattern == 'two_three_two':
-        seq = ['P', 'B', 'B', 'B', 'P', 'P', 'B', 'B', 'B', 'P', 'P']
-        return seq[len(history) % len(seq)]
-    return 'B'
+        seq = ['P', 'B']
+        return seq[len(history) % 2]
 
-# Betting progression
-progression = [10, 15, 25, 25, 50, 50, 75, 100, 125, 175]
+def get_preview(friend_name, history):
+    preview = []
+    for _ in range(preview_length):
+        temp_history = history + preview
+        preview.append(get_expected_bet(friend_name, temp_history))
+    return ''.join(preview)
 
-# Result entry
-st.title("🎲 AI Baccarat Friend Tracker")
-result = st.radio("Enter result of hand:", ["Player (P)", "Banker (B)", "Skip"])
-if st.button("Submit Result"):
-    if result != "Skip":
-        current = 'P' if result.startswith('P') else 'B'
-        st.session_state.history.append(current)
-        for friend in st.session_state.friends:
-            expected = get_expected_bet(friend, st.session_state.history[:-1])
-            if expected == current:
-                st.session_state.friends[friend]['misses'] = 0
-            else:
-                st.session_state.friends[friend]['misses'] += 1
-
-# Reset all friends
-if st.button("🔄 Reset All Friends"):
-    for friend in st.session_state.friends:
-        st.session_state.friends[friend]['misses'] = 0
-        st.session_state.friends[friend]['last_result'] = ''
-        st.session_state.friends[friend]['win_streak'] = 0
-
-# Friend tracker
-st.subheader("Friend Miss Tracker")
 friend_data = []
 for name, stats in st.session_state.friends.items():
     expected = get_expected_bet(name, st.session_state.history)
     misses = stats['misses']
-    amount = progression[misses] if misses < len(progression) else progression[-1]
+    preview = get_preview(name, st.session_state.history)
+    amount = [10, 15, 25, 25, 50, 50, 75, 100, 125, 175]
+    next_amount = amount[misses] if misses < len(amount) else amount[-1]
     friend_data.append({
         'Friend': name,
         'Pattern': stats['pattern'],
         'Expected Bet': expected,
         'Misses': misses,
-        'Next Bet Amount ($)': amount
+        'Next Bet Amount ($)': next_amount,
+        'Preview (Next 5)': preview
     })
+
+# Per-friend reset buttons and streak chart
+st.subheader("Friend Actions")
+for friend in st.session_state.friends:
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.write(f"**{friend}** — Pattern: {st.session_state.friends[friend]['pattern']}, Misses: {st.session_state.friends[friend]['misses']}")
+    with col2:
+        if st.button(f"Reset {friend}"):
+            st.session_state.friends[friend]['misses'] = 0
+            st.session_state.friends[friend]['last_result'] = ''
+            st.session_state.friends[friend]['win_streak'] = 0
+
+import matplotlib.pyplot as plt
+st.subheader("Miss Streaks Chart")
+plt.figure(figsize=(10, 4))
+plt.bar([f"F{i+1}" for i in range(10)], [st.session_state.friends[f"Friend {i+1}"]['misses'] for i in range(10)])
+plt.title("Current Miss Streaks by Friend")
+plt.xlabel("Friend")
+plt.ylabel("Misses")
+st.pyplot(plt)
 
 friend_df = pd.DataFrame(friend_data)
 st.dataframe(friend_df.style.apply(lambda row: ['background-color: lightgreen' if row['Misses'] >= 5 else '' for _ in row], axis=1))
-
-# Recommended bet
-st.subheader("Recommended Bet")
-best = max(friend_data, key=lambda x: x['Misses'])
-if best['Misses'] >= 4:
-    bet_amount = best['Next Bet Amount ($)']
-    st.success(f"Bet AGAINST {best['Friend']} — expects {best['Expected Bet']}, has {best['Misses']} misses. Bet ${bet_amount}")
-    if st.button("Apply Win"):
-        st.session_state.balance += bet_amount
-    if st.button("Apply Loss"):
-        st.session_state.balance -= bet_amount
-else:
-    st.info("No friend has 4+ misses. Take a free hand.")
-
-# Balance tracker
-st.subheader("Session Status")
-st.metric("Current Balance", f"${st.session_state.balance:.2f}")
-st.metric("Stop Loss Target", f"${st.session_state.stop_loss:.2f}")
-st.metric("Win Goal Target", f"${st.session_state.win_goal:.2f}")
-if st.session_state.balance <= st.session_state.stop_loss:
-    st.error("❌ STOP LOSS hit! End session.")
-elif st.session_state.balance >= st.session_state.win_goal:
-    st.success("🎉 WIN GOAL reached! Congrats.")
