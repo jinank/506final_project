@@ -80,6 +80,13 @@ if st.button("Submit Result"):
             else:
                 st.session_state.friends[friend]['misses'] += 1
 
+# Reset all friend bets
+if st.button("🔄 Reset All Friends"):
+    for friend in st.session_state.friends:
+        st.session_state.friends[friend]['misses'] = 0
+        st.session_state.friends[friend]['last_result'] = ''
+        st.session_state.friends[friend]['win_streak'] = 0
+
 # Friend tracker table
 st.subheader("Friend Miss Tracker")
 friend_data = []
