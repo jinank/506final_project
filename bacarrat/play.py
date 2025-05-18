@@ -22,50 +22,16 @@ class FriendPattern:
                 self.miss_count += 1
                 self.step = min(self.miss_count, 11)
             return
-
-        # track last two outcomes for Star 2.0 patterns
-        self.last_two.append(outcome)
-        if len(self.last_two) > 2:
-            self.last_two.pop(0)
-        # update pattern misses and step for Star 2.0
-        if len(self.last_two) == 2 and self.last_two[0] == self.last_two[1]:
-            # back-to-back win: reset counters
-            self.miss_count = 0
-            self.step = 0
-        else:
-            # increment miss count and advance step
-            self.miss_count += 1
-            self.step = min(self.miss_count, 11)
-
-    def next_bet_amount(self, unit: float) -> float:
-        # Star 2.0 betting sequence base units
-        star_sequence = [unit, unit*1.5, unit*2.5, unit*4, unit*6.5,
-                         unit*10.5, unit*17, unit*27.5, unit*44.5,
-                         unit*72, unit*116, unit*188]
-        return star_sequence[self.step]
-
-    def next_bet_choice(self) -> str:
-        # map pattern_type to bet choice
-        choices = {
-            'banker_only': 'B',
-            'player_only': 'P',
-            'alternator_start_banker': ['B','P'],
-            'alternator_start_player': ['P','B'],
-            'terrific_twos': ['B','P','P'],
-            'chop': ['P','B'],
-            'follow_last': None,   # will choose last hand dynamically
-            'three_pattern': None, # custom logic needed
-            'one_two_one': None,
-            'two_three_two': None
-        }
-        choice = choices.get(self.pattern_type)
-        if self.pattern_type == 'follow_last' and self.last_two:
-            return self.last_two[-1]
-        # fallback for patterns defined as lists
-        if isinstance(choice, list):
-            return choice[self.miss_count % len(choice)]
-        # default for single-value patterns or fallback
-        return choice or 'B'
+        if self.pattern_type == 'player_only':
+            if outcome == 'P':
+                # immediate hit on player outcome
+                self.miss_count = 0
+                self.step = 0
+            else:
+                # count misses when not player
+                self.miss_count += 1
+                self.step = min(self.miss_count, 11)
+            return choice or 'B'
 
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
