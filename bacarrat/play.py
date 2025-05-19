@@ -158,5 +158,9 @@ st.write('### Hand History')
 st.write(' '.join(session.history))
 
 st.write('### Total Needed for 4-Step Limit')
-total = df['Next Bet Amount'].sum()
+if 'Next Bet Amount' in df.columns:
+    total = df['Next Bet Amount'].sum()
+else:
+    total = 0
+    st.warning("Column 'Next Bet Amount' not found; defaulting total to 0.")
 st.write(f'{total}')
