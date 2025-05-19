@@ -101,24 +101,30 @@ with col3:
     if st.button('Record Tie'):
         session.add_hand('T')
 
-# Main Display
-st.write('### Next Bets & Hit/Miss per Friend')
-df=session.get_state_df()
-# Highlighting colors for Miss Count >= 5 (up to 20)
-cell_colors=[]
-for _, row in df.iterrows():
-    row_colors=[]
-    for col in df.columns:
-        if col == 'Miss Count' and 5 <= row['Miss Count'] <= 20:
-            row_colors.append('lightgreen')
-        else:
-            row_colors.append('white')
-    cell_colors.append(row_colors)
-col_colors = list(map(list, zip(*cell_colors)))
-fig=go.Figure(data=[go.Table(header=dict(values=list(df.columns),fill_color='lightgrey'),cells=dict(values=[df[c] for c in df.columns],fill_color=col_colors))])
-st.plotly_chart(fig,use_container_width=True)
+# Main Display: transpose so each friend is a column
+st.write('### Dashboard')
+df = session.get_state_df()
+# Create transposed table with attributes as rows, friends as columns
+t_df = df.set_index('Name').T  # index: Pattern, Last Bet Result, etc.
+# Add Hand History as a new row
+t_df.loc['Hand History'] = [' '.join(session.history)] * len(t_df.columns)
+
+# Build Plotly table with header=friend names, first column attribute labels
+header_vals = ['Attribute'] + list(t_df.columns)
+cell_vals = [list(t_df.index)] + [list(t_df[col]) for col in t_df.columns]
+fig = go.Figure(data=[
+    go.Table(
+        header=dict(values=header_vals, fill_color='lightgrey'),
+        cells=dict(values=cell_vals, fill_color='white')
+    )
+])
+st.plotly_chart(fig, use_container_width=True)
 
 # History & Summary
+st.write('### Total Needed for 12-Step Limit')
+total = df['Next Bet Amount'].sum() if 'Next Bet Amount' in df.columns else 0
+st.write(total)
+
 st.write('### Hand History')
 st.write(' '.join(session.history))
 st.write('### Total Needed for 12-Step Limit')
