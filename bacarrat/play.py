@@ -113,32 +113,32 @@ with st.sidebar:
 # Main display
 st.write('### Next Bets & Hit/Miss per Friend')
 
-# Fetch state as DataFrame
+# Fetch state and ensure DataFrame
 df = session.get_state()
+import pandas as _pd
+if not isinstance(df, _pd.DataFrame):
+    df = _pd.DataFrame(df)
 
-# Build a Plotly table with Miss Count=5 highlighted in green
+# Build a Plotly table, highlighting 'Miss Count' == 5 in green per cell
 import plotly.graph_objects as go
+# Construct row-by-row fill colors
+cell_colors = []
+for _, row in df.iterrows():
+    row_colors = []
+    for col in df.columns:
+        if col == 'Miss Count' and row['Miss Count'] == 5:
+            row_colors.append('lightgreen')
+        else:
+            row_colors.append('white')
+    cell_colors.append(row_colors)
 
-# Prepare fill colors: highlight Miss Count cells
-colors = []
-for val in df['Miss Count']:
-    colors.append('lightgreen' if val == 5 else 'white')
-
-# Each column needs a list of colors: only Miss Count gets colors, others white
-fill_colors = []
-for col in df.columns:
-    if col == 'Miss Count':
-        fill_colors.append(colors)
-    else:
-        fill_colors.append(['white'] * len(df))
-
+# Create and display table
 fig = go.Figure(data=[
     go.Table(
         header=dict(values=list(df.columns), fill_color='lightgrey'),
-        cells=dict(values=[df[col] for col in df.columns], fill_color=fill_colors)
+        cells=dict(values=[df[col] for col in df.columns], fill_color=cell_colors)
     )
 ])
-
 st.plotly_chart(fig, use_container_width=True)
 
 # Controls to record hands
