@@ -1,6 +1,7 @@
 # Revised Bakura Streamlit MVP (4 Friends, 4-Step Star 2.0)
 import streamlit as st
 from typing import List, Dict
+import pandas as pd
 
 # --- Data Models ---
 class FriendPattern:
@@ -77,21 +78,21 @@ class Session:
         for friend in self.friends:
             friend.record_hand(outcome)
 
-    def get_state(self) -> List[Dict]:
-        # Prepare display data
-        data = []
+    def get_state(self) -> pd.DataFrame:
+        # Return state as DataFrame for display
+        records = []
         for f in self.friends:
-            data.append({
+            records.append({
                 'Name': f.name,
                 'Pattern': f.pattern_type,
-                'Last Hit': '✔️' if f.last_hit else '❌',
+                'Last Bet Result': 'Win' if f.last_hit else 'Loss',
                 'Miss Count': f.miss_count,
                 'Next Bet': f.next_bet_choice(),
-                'Bet Amount': f.next_bet_amount(self.unit),
+                'Next Bet Amount': f.next_bet_amount(self.unit),
                 'Total Hits': f.total_hits,
                 'Total Misses': f.total_misses
             })
-        return data
+        return pd.DataFrame(records)
 
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
@@ -110,8 +111,16 @@ with st.sidebar:
         session.reset_patterns()
 
 # Main display
+df = session.get_state()
+
+# Highlight miss count of 5 in green
+def highlight_five(val):
+    return 'background-color: lightgreen' if val == 5 else ''
+
+styled = df.style.applymap(highlight_five, subset=['Miss Count'])
+
 st.write('### Next Bets & Hit/Miss per Friend')
-st.table(session.get_state())
+st.dataframe(styled, use_container_width=True)
 
 # Controls to record hands
 col1, col2, col3 = st.columns(3)
@@ -130,5 +139,5 @@ st.write('### Hand History')
 st.write(' '.join(session.history))
 
 st.write('### Total Needed for 4-Step Limit')
-total = sum(item['Bet Amount'] for item in session.get_state())
+total = df['Next Bet Amount'].sum()
 st.write(f'{total}')
