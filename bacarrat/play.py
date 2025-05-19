@@ -1,3 +1,4 @@
+# Revised Bakura Streamlit MVP (4 Friends, 4-Step Star 2.0)
 import streamlit as st
 from typing import List, Dict
 
@@ -6,17 +7,16 @@ class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
         self.pattern_type = pattern_type
-        # Star 2.0 tracking
+        # Tracking
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
-        # Hit/miss tracking
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
 
     def next_bet_choice(self) -> str:
-        # Map each pattern to its repeating bet sequence
+        # Define each friend's fixed repeating pattern
         if self.pattern_type == 'banker_only':
             return 'B'
         if self.pattern_type == 'player_only':
@@ -28,31 +28,31 @@ class FriendPattern:
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        # Star 2.0 betting sequence for 4 steps
-        seq = [unit, unit * 1.5, unit * 2.5, unit * 4]
-        # if step index exceeds, use last
-        return seq[self.step] if self.step < len(seq) else seq[-1]
+        # Simplified 4-step Star 2.0 sequence
+        sequence = [unit, unit * 1.5, unit * 2.5, unit * 4]
+        # stay at max if step exceeds last index
+        index = min(self.step, len(sequence) - 1)
+        return sequence[index]
 
     def record_hand(self, outcome: str):
+        # Compare predicted vs actual outcome
         predicted = self.next_bet_choice()
-        hit = (outcome == predicted)
-        self.last_hit = hit
-        if hit:
+        self.last_hit = (outcome == predicted)
+        if self.last_hit:
             self.total_hits += 1
             self.win_streak += 1
         else:
             self.total_misses += 1
             self.win_streak = 0
 
-        # After two consecutive hits, reset the pattern
+        # Reset after two consecutive wins
         if self.win_streak >= 2:
             self.miss_count = 0
             self.step = 0
         else:
-            # increment miss count and advance step up to max index 3
+            # Advance miss count and step (up to 3)
             self.miss_count += 1
-            max_step = 3  # indices: 0,1,2,3
-            self.step = min(self.miss_count, max_step)
+            self.step = min(self.miss_count, 3)
 
 
 class Session:
@@ -62,6 +62,7 @@ class Session:
         self.reset_patterns()
 
     def reset_patterns(self):
+        # Four friends with chosen patterns
         patterns = [
             'banker_only',
             'player_only',
@@ -77,8 +78,10 @@ class Session:
             friend.record_hand(outcome)
 
     def get_state(self) -> List[Dict]:
-        return [
-            {
+        # Prepare display data
+        data = []
+        for f in self.friends:
+            data.append({
                 'Name': f.name,
                 'Pattern': f.pattern_type,
                 'Last Hit': '✔️' if f.last_hit else '❌',
@@ -87,26 +90,30 @@ class Session:
                 'Bet Amount': f.next_bet_amount(self.unit),
                 'Total Hits': f.total_hits,
                 'Total Misses': f.total_misses
-            }
-            for f in self.friends
-        ]
+            })
+        return data
 
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
-session = st.session_state.get('game')
+
+# Initialize or retrieve session
+session = st.session_state.get('session')
 if session is None:
     session = Session()
-    st.session_state['game'] = session
+    st.session_state['session'] = session
 
+# Sidebar controls
 with st.sidebar:
-    st.title('Bakura Algorithm MVP')
-    session.unit = st.number_input('Unit Size', 1.0, 100.0, value=session.unit)
+    st.title('Bakura 4-Friend MVP')
+    session.unit = st.number_input('Unit Size', min_value=1.0, step=1.0, value=session.unit)
     if st.button('New Shoe'):
         session.reset_patterns()
 
-st.write('### Next Bets & Hit/Miss Counts')
+# Main display
+st.write('### Next Bets & Hit/Miss per Friend')
 st.table(session.get_state())
 
+# Controls to record hands
 col1, col2, col3 = st.columns(3)
 with col1:
     if st.button('Record Banker'):
@@ -118,9 +125,10 @@ with col3:
     if st.button('Record Tie'):
         session.add_hand('T')
 
+# Show history and summary
 st.write('### Hand History')
 st.write(' '.join(session.history))
 
-# Summary
-total_needed = sum(item['Bet Amount'] for item in session.get_state())
-st.write(f'Total needed for 4-step limit: {total_needed}')
+st.write('### Total Needed for 4-Step Limit')
+total = sum(item['Bet Amount'] for item in session.get_state())
+st.write(f'{total}')
