@@ -138,10 +138,16 @@ for _, row in df.iterrows():
             row_colors.append('white')
     cell_colors.append(row_colors)
 
+# Build and display Plotly table correctly
+# Transpose cell_colors to per-column lists
+column_colors = list(map(list, zip(*cell_colors)))
 fig = go.Figure(data=[
     go.Table(
         header=dict(values=list(df.columns), fill_color='lightgrey'),
-        cells=dict(values=[df[col] for df in [df[col] for col in df.columns]], fill_color=cell_colors)
+        cells=dict(
+            values=[df[col] for col in df.columns],
+            fill_color=column_colors
+        )
     )
 ])
 st.plotly_chart(fig, use_container_width=True)
