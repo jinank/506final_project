@@ -6,9 +6,11 @@ class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
         self.pattern_type = pattern_type
+        # Star 2.0 tracking
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
+        # Hit/miss tracking
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
@@ -26,9 +28,9 @@ class FriendPattern:
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        # Star 2.0 betting sequence
-        seq = [unit, unit*1.5, unit*2.5, unit*4]
-        # after 4 losses, keep last amount
+        # Star 2.0 betting sequence for 4 steps
+        seq = [unit, unit * 1.5, unit * 2.5, unit * 4]
+        # if step index exceeds, use last
         return seq[self.step] if self.step < len(seq) else seq[-1]
 
     def record_hand(self, outcome: str):
@@ -42,13 +44,15 @@ class FriendPattern:
             self.total_misses += 1
             self.win_streak = 0
 
-        # reset after 2 consecutive wins
+        # After two consecutive hits, reset the pattern
         if self.win_streak >= 2:
             self.miss_count = 0
             self.step = 0
         else:
+            # increment miss count and advance step up to max index 3
             self.miss_count += 1
-            self.step = min(self.miss_count, len([unit, unit*1.5, unit*2.5, unit*4]) - 1)
+            max_step = 3  # indices: 0,1,2,3
+            self.step = min(self.miss_count, max_step)
 
 
 class Session:
