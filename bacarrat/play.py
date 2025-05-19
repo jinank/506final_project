@@ -35,28 +35,27 @@ class FriendPattern:
         index = min(self.step, len(sequence) - 1)
         return sequence[index]
 
-    def record_hand(self, outcome: str):
+        def record_hand(self, outcome: str):
         # Compare predicted vs actual outcome
         predicted = self.next_bet_choice()
         self.last_hit = (outcome == predicted)
         if self.last_hit:
             self.total_hits += 1
             self.win_streak += 1
+            # On consecutive win, reset progression
+            if self.win_streak >= 2:
+                self.miss_count = 0
+                self.step = 0
+            # on single win, do not advance progression
         else:
+            # Miss: reset win streak, advance progression
             self.total_misses += 1
             self.win_streak = 0
-
-        # Reset after two consecutive wins
-        if self.win_streak >= 2:
-            self.miss_count = 0
-            self.step = 0
-        else:
-            # Advance miss count and step (up to 3)
             self.miss_count += 1
             self.step = min(self.miss_count, 3)
 
-
-class Session:
+# --- Session class continues below
+class Session::
     def __init__(self):
         self.unit = 10.0
         self.history: List[str] = []
