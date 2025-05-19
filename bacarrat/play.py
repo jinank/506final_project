@@ -104,12 +104,17 @@ with col3:
 # Main Display
 st.write('### Next Bets & Hit/Miss per Friend')
 df=session.get_state_df()
-# Highlighting colors for Miss Count==5
+# Highlighting colors for Miss Count >= 5 (up to 20)
 cell_colors=[]
-for _,row in df.iterrows():
-    row_colors=[('lightgreen' if row['Miss Count']==5 else 'white') for _ in df.columns]
+for _, row in df.iterrows():
+    row_colors=[]
+    for col in df.columns:
+        if col == 'Miss Count' and 5 <= row['Miss Count'] <= 20:
+            row_colors.append('lightgreen')
+        else:
+            row_colors.append('white')
     cell_colors.append(row_colors)
-col_colors=list(map(list,zip(*cell_colors)))
+col_colors=list(map(list,zip(*cell_colors)))=list(map(list,zip(*cell_colors)))
 fig=go.Figure(data=[go.Table(header=dict(values=list(df.columns),fill_color='lightgrey'),cells=dict(values=[df[c] for c in df.columns],fill_color=col_colors))])
 st.plotly_chart(fig,use_container_width=True)
 
