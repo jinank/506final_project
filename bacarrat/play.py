@@ -82,7 +82,8 @@ if 'session' not in st.session_state:
     st.session_state['session']=Session()
 session=st.session_state['session']
 
-# Sidebar\with st.sidebar:
+# Sidebar
+with st.sidebar:
     st.title('Bakura 4-Friend MVP')
     session.unit = st.number_input('Unit Size',1.0,100.0,value=session.unit)
     if st.button('New Shoe'):
