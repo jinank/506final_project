@@ -114,7 +114,7 @@ for _, row in df.iterrows():
         else:
             row_colors.append('white')
     cell_colors.append(row_colors)
-col_colors=list(map(list,zip(*cell_colors)))=list(map(list,zip(*cell_colors)))
+col_colors = list(map(list, zip(*cell_colors)))
 fig=go.Figure(data=[go.Table(header=dict(values=list(df.columns),fill_color='lightgrey'),cells=dict(values=[df[c] for c in df.columns],fill_color=col_colors))])
 st.plotly_chart(fig,use_container_width=True)
 
