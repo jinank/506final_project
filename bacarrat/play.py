@@ -9,7 +9,6 @@ class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
         self.pattern_type = pattern_type
-        # Tracking variables
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
@@ -18,54 +17,30 @@ class FriendPattern:
         self.total_misses = 0
 
     def next_bet_choice(self) -> str:
-        # Define each friend's repeating pattern
-        if self.pattern_type == 'banker_only':
-            return 'B'
-        if self.pattern_type == 'player_only':
-            return 'P'
-        if self.pattern_type == 'alternator_start_banker':
-            return ['B', 'P'][self.miss_count % 2]
-        if self.pattern_type == 'alternator_start_player':
-            return ['P', 'B'][self.miss_count % 2]
-        # Default fallback
+        if self.pattern_type == 'banker_only': return 'B'
+        if self.pattern_type == 'player_only': return 'P'
+        if self.pattern_type == 'alternator_start_banker': return ['B','P'][self.miss_count % 2]
+        if self.pattern_type == 'alternator_start_player': return ['P','B'][self.miss_count % 2]
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        # Full 12-step Star 2.0 sequence
-        sequence = [
-            unit,
-            unit * 1.5,
-            unit * 2.5,
-            unit * 4,
-            unit * 6.5,
-            unit * 10.5,
-            unit * 17,
-            unit * 27.5,
-            unit * 44.5,
-            unit * 72,
-            unit * 116,
-            unit * 188
-        ]
-        index = min(self.step, len(sequence) - 1)
+        sequence = [unit, unit*1.5, unit*2.5, unit*4, unit*6.5, unit*10.5, unit*17, unit*27.5, unit*44.5, unit*72, unit*116, unit*188]
+        index = min(self.step, len(sequence)-1)
         return sequence[index]
 
     def record_hand(self, outcome: str):
-        # Record and compare predicted vs actual outcome
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
-
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            # Reset progression after two consecutive wins
             if self.win_streak >= 2:
                 self.miss_count = 0
                 self.step = 0
         else:
             self.total_misses += 1
             self.win_streak = 0
-            # Advance progression only on a miss
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
 
@@ -77,25 +52,17 @@ class Session:
         self.reset_patterns()
 
     def reset_patterns(self):
-        # Four friends with specified patterns
-        patterns = [
-            'banker_only',
-            'player_only',
-            'alternator_start_banker',
-            'alternator_start_player'
-        ]
+        patterns = ['banker_only','player_only','alternator_start_banker','alternator_start_player']
         self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(4)]
         self.history = []
 
     def add_hand(self, outcome: str):
-        # Record a new hand and update each friend
         self.history.append(outcome)
         for friend in self.friends:
             friend.record_hand(outcome)
 
     def get_state_df(self) -> pd.DataFrame:
-        # Build DataFrame for display
-        records = []
+        records=[]
         for f in self.friends:
             records.append({
                 'Name': f.name,
@@ -111,49 +78,18 @@ class Session:
 
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
-
-# Initialize or retrieve session
 if 'session' not in st.session_state:
-    st.session_state['session'] = Session()
-session = st.session_state['session']
+    st.session_state['session']=Session()
+session=st.session_state['session']
 
-# Sidebar controls
-with st.sidebar:
+# Sidebar\with st.sidebar:
     st.title('Bakura 4-Friend MVP')
-    session.unit = st.number_input('Unit Size', min_value=1.0, step=0.5, value=session.unit)
+    session.unit = st.number_input('Unit Size',1.0,100.0,value=session.unit)
     if st.button('New Shoe'):
         session.reset_patterns()
 
-# Main display
-df = session.get_state_df()
-
-# Create cell-level colors for Plotly table
-cell_colors = []
-for _, row in df.iterrows():
-    row_colors = []
-    for col in df.columns:
-        if col == 'Miss Count' and row['Miss Count'] == 5:
-            row_colors.append('lightgreen')
-        else:
-            row_colors.append('white')
-    cell_colors.append(row_colors)
-
-# Build and display Plotly table correctly
-# Transpose cell_colors to per-column lists
-column_colors = list(map(list, zip(*cell_colors)))
-fig = go.Figure(data=[
-    go.Table(
-        header=dict(values=list(df.columns), fill_color='lightgrey'),
-        cells=dict(
-            values=[df[col] for col in df.columns],
-            fill_color=column_colors
-        )
-    )
-])
-st.plotly_chart(fig, use_container_width=True)
-
-# Hand input buttons
-col1, col2, col3 = st.columns(3)
+# Hand Input Buttons (must be above table to affect state before rendering)
+col1,col2,col3=st.columns(3)
 with col1:
     if st.button('Record Banker'):
         session.add_hand('B')
@@ -164,10 +100,21 @@ with col3:
     if st.button('Record Tie'):
         session.add_hand('T')
 
-# Show history and summary
+# Main Display
+st.write('### Next Bets & Hit/Miss per Friend')
+df=session.get_state_df()
+# Highlighting colors for Miss Count==5
+cell_colors=[]
+for _,row in df.iterrows():
+    row_colors=[('lightgreen' if row['Miss Count']==5 else 'white') for _ in df.columns]
+    cell_colors.append(row_colors)
+col_colors=list(map(list,zip(*cell_colors)))
+fig=go.Figure(data=[go.Table(header=dict(values=list(df.columns),fill_color='lightgrey'),cells=dict(values=[df[c] for c in df.columns],fill_color=col_colors))])
+st.plotly_chart(fig,use_container_width=True)
+
+# History & Summary
 st.write('### Hand History')
 st.write(' '.join(session.history))
-
 st.write('### Total Needed for 12-Step Limit')
-total = df['Next Bet Amount'].sum() if 'Next Bet Amount' in df.columns else 0
-st.write(f'{total}')
+total=df['Next Bet Amount'].sum() if 'Next Bet Amount' in df.columns else 0
+st.write(total)
