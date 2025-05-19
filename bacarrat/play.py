@@ -27,13 +27,45 @@ class FriendPattern:
         }
         return patterns.get(self.pattern_type, lambda: 'B')()
 
-    def next_bet_amount(self, unit: float) -> float:
-        # Simplified 4-step Star 2.0 sequence
-        sequence = [unit, unit * 1.5, unit * 2.5, unit * 4]
+        def next_bet_amount(self, unit: float) -> float:
+        # Full 12-step Star 2.0 sequence
+        sequence = [
+            unit,
+            unit * 1.5,
+            unit * 2.5,
+            unit * 4,
+            unit * 6.5,
+            unit * 10.5,
+            unit * 17,
+            unit * 27.5,
+            unit * 44.5,
+            unit * 72,
+            unit * 116,
+            unit * 188
+        ]
+        # choose step or cap at last
         index = min(self.step, len(sequence) - 1)
         return sequence[index]
 
     def record_hand(self, outcome: str):
+        # Compare predicted vs actual outcome
+        predicted = self.next_bet_choice()
+        self.last_hit = (outcome == predicted)
+        if self.last_hit:
+            self.total_hits += 1
+            self.win_streak += 1
+            # reset after two consecutive wins
+            if self.win_streak >= 2:
+                self.miss_count = 0
+                self.step = 0
+        else:
+            self.total_misses += 1
+            self.win_streak = 0
+            # Only advance progression on a miss
+            self.miss_count += 1
+            # allow step to progress through full sequence
+            self.step = min(self.miss_count, 11)
+(self, outcome: str):
         # Compare predicted vs actual outcome
         predicted = self.next_bet_choice()
         self.last_hit = (outcome == predicted)
