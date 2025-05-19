@@ -30,7 +30,7 @@ class FriendPattern:
         # Default fallback
         return 'B'
 
-        def next_bet_amount(self, unit: float) -> float:
+    def next_bet_amount(self, unit: float) -> float:
         # Full 12-step Star 2.0 sequence
         sequence = [
             unit,
@@ -46,46 +46,15 @@ class FriendPattern:
             unit * 116,
             unit * 188
         ]
-        # choose step or cap at last
         index = min(self.step, len(sequence) - 1)
         return sequence[index]
 
     def record_hand(self, outcome: str):
-        # Compare predicted vs actual outcome
+        # Record and compare predicted vs actual outcome
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
-        if hit:
-            self.total_hits += 1
-            self.win_streak += 1
-            # Reset progression after two consecutive wins
-            if self.win_streak >= 2:
-                self.miss_count = 0
-                self.step = 0
-        else:
-            self.total_misses += 1
-            self.win_streak = 0
-            # Advance progression only on a miss
-            self.miss_count += 1
-            # allow step to progress through full sequence length (0-11)
-            self.step = min(self.miss_count, len([
-                unit,
-                unit * 1.5,
-                unit * 2.5,
-                unit * 4,
-                unit * 6.5,
-                unit * 10.5,
-                unit * 17,
-                unit * 27.5,
-                unit * 44.5,
-                unit * 72,
-                unit * 116,
-                unit * 188
-            ]) - 1)(self, outcome: str):
-        # Compare predicted vs actual outcome
-        predicted = self.next_bet_choice()
-        hit = (outcome == predicted)
-        self.last_hit = hit
+
         if hit:
             self.total_hits += 1
             self.win_streak += 1
@@ -109,17 +78,17 @@ class Session:
 
     def reset_patterns(self):
         # Four friends with specified patterns
-        pattern_list = [
+        patterns = [
             'banker_only',
             'player_only',
             'alternator_start_banker',
             'alternator_start_player'
         ]
-        self.friends = [FriendPattern(f'Friend {i+1}', pattern_list[i]) for i in range(4)]
+        self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(4)]
         self.history = []
 
     def add_hand(self, outcome: str):
-        # Record a new hand outcome and update each friend
+        # Record a new hand and update each friend
         self.history.append(outcome)
         for friend in self.friends:
             friend.record_hand(outcome)
@@ -143,7 +112,7 @@ class Session:
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
 
-# Initialize or retrieve session from state
+# Initialize or retrieve session
 if 'session' not in st.session_state:
     st.session_state['session'] = Session()
 session = st.session_state['session']
@@ -151,7 +120,7 @@ session = st.session_state['session']
 # Sidebar controls
 with st.sidebar:
     st.title('Bakura 4-Friend MVP')
-    session.unit = st.number_input('Unit Size', min_value=1.0, step=1.0, value=session.unit)
+    session.unit = st.number_input('Unit Size', min_value=1.0, step=0.5, value=session.unit)
     if st.button('New Shoe'):
         session.reset_patterns()
 
@@ -172,7 +141,7 @@ for _, row in df.iterrows():
 fig = go.Figure(data=[
     go.Table(
         header=dict(values=list(df.columns), fill_color='lightgrey'),
-        cells=dict(values=[df[col] for col in df.columns], fill_color=cell_colors)
+        cells=dict(values=[df[col] for df in [df[col] for col in df.columns]], fill_color=cell_colors)
     )
 ])
 st.plotly_chart(fig, use_container_width=True)
@@ -193,6 +162,6 @@ with col3:
 st.write('### Hand History')
 st.write(' '.join(session.history))
 
-st.write('### Total Needed for 4-Step Limit')
+st.write('### Total Needed for 12-Step Limit')
 total = df['Next Bet Amount'].sum() if 'Next Bet Amount' in df.columns else 0
 st.write(f'{total}')
