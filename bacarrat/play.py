@@ -111,16 +111,35 @@ with st.sidebar:
         session.reset_patterns()
 
 # Main display
+st.write('### Next Bets & Hit/Miss per Friend')
+
+# Fetch state as DataFrame
 df = session.get_state()
 
-# Highlight miss count of 5 in green
-def highlight_five(val):
-    return 'background-color: lightgreen' if val == 5 else ''
+# Build a Plotly table with Miss Count=5 highlighted in green
+import plotly.graph_objects as go
 
-styled = df.style.applymap(highlight_five, subset=['Miss Count'])
+# Prepare fill colors: highlight Miss Count cells
+colors = []
+for val in df['Miss Count']:
+    colors.append('lightgreen' if val == 5 else 'white')
 
-st.write('### Next Bets & Hit/Miss per Friend')
-st.dataframe(styled, use_container_width=True)
+# Each column needs a list of colors: only Miss Count gets colors, others white
+fill_colors = []
+for col in df.columns:
+    if col == 'Miss Count':
+        fill_colors.append(colors)
+    else:
+        fill_colors.append(['white'] * len(df))
+
+fig = go.Figure(data=[
+    go.Table(
+        header=dict(values=list(df.columns), fill_color='lightgrey'),
+        cells=dict(values=[df[col] for col in df.columns], fill_color=fill_colors)
+    )
+])
+
+st.plotly_chart(fig, use_container_width=True)
 
 # Controls to record hands
 col1, col2, col3 = st.columns(3)
