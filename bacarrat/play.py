@@ -15,20 +15,48 @@ class FriendPattern:
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
+        self.history_outcomes: List[str] = []  # track actual outcomes
 
     def next_bet_choice(self) -> str:
-        if self.pattern_type == 'banker_only': return 'B'
-        if self.pattern_type == 'player_only': return 'P'
-        if self.pattern_type == 'alternator_start_banker': return ['B','P'][self.miss_count % 2]
-        if self.pattern_type == 'alternator_start_player': return ['P','B'][self.miss_count % 2]
+        if self.pattern_type == 'banker_only':
+            return 'B'
+        if self.pattern_type == 'player_only':
+            return 'P'
+        if self.pattern_type == 'alternator_start_banker':
+            # alternate B, P
+            return ['B', 'P'][self.miss_count % 2]
+        if self.pattern_type == 'alternator_start_player':
+            # alternate P, B
+            return ['P', 'B'][self.miss_count % 2]
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        sequence = [unit, unit*1.5, unit*2.5, unit*4, unit*6.5, unit*10.5, unit*17, unit*27.5, unit*44.5, unit*72, unit*116, unit*188]
-        idx = min(self.step, len(sequence)-1)
+        sequence = [unit, unit*1.5, unit*2.5, unit*4, unit*6.5, unit*10.5,
+                    unit*17, unit*27.5, unit*44.5, unit*72, unit*116, unit*188]
+        idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
     def record_hand(self, outcome: str):
+        # Track actual outcome
+        self.history_outcomes.append(outcome)
+        # Special 2-win detection for alternator patterns
+        if self.pattern_type == 'alternator_start_banker' and len(self.history_outcomes) >= 2:
+            if self.history_outcomes[-2:] == ['B', 'P']:
+                self.last_hit = True
+                self.total_hits += 2
+                self.miss_count = 0
+                self.step = 0
+                self.win_streak = 2
+                return
+        if self.pattern_type == 'alternator_start_player' and len(self.history_outcomes) >= 2:
+            if self.history_outcomes[-2:] == ['P', 'B']:
+                self.last_hit = True
+                self.total_hits += 2
+                self.miss_count = 0
+                self.step = 0
+                self.win_streak = 2
+                return
+        # Fallback to standard hit/miss logic
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
@@ -44,7 +72,7 @@ class FriendPattern:
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
 
-class Session:
+# --- Session Model ---
     def __init__(self):
         self.unit = 10.0
         self.history: List[str] = []
@@ -120,8 +148,25 @@ with col3:
 # Star 2.0 Grid
 st.write('### Star 2.0 Sequence Layout')
 steps = list(range(1, 13))
-bet_seq = session.get_star_sequence()
+# Compute the 12-step Star 2.0 bet sequence inline
+unit = session.unit
+bet_seq = [
+    unit,
+    unit * 1.5,
+    unit * 2.5,
+    unit * 4,
+    unit * 6.5,
+    unit * 10.5,
+    unit * 17,
+    unit * 27.5,
+    unit * 44.5,
+    unit * 72,
+    unit * 116,
+    unit * 188,
+]
 # Create DataFrame: single row of bet amounts under step columns
+df_star = pd.DataFrame([bet_seq], index=['Bet Amount'], columns=steps)
+st.dataframe(df_star, use_container_width=True)
 df_star = pd.DataFrame([bet_seq], index=['Bet Amount'], columns=steps)
 st.dataframe(df_star, use_container_width=True)
 
