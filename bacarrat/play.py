@@ -38,9 +38,9 @@ class FriendPattern:
         def next_bet_amount(self, unit: float) -> float:
         # Custom Star progression as per user (multiples of unit)
         # For unit=10: 10,15,25,25,50,75,100,125,175,225,300
-        multipliers = [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
-        sequence = [unit * m for m in multipliers]
-        idx = min(self.step, len(sequence) - 1)
+            multipliers = [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
+            sequence = [unit * m for m in multipliers]
+            idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
     def record_hand(self, outcome: str):
