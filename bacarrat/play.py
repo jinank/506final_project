@@ -27,7 +27,7 @@ class FriendPattern:
         self.alternator_index = 0
 
     def next_bet_choice(self) -> str:
-        # Alternator pattern uses fixed sequence, no conditional flip
+        # Alternator patterns follow a fixed B->P or P->B sequence
         if self.alternator_sequence:
             return self.alternator_sequence[self.alternator_index]
         # Fixed patterns
@@ -45,14 +45,26 @@ class FriendPattern:
         return sequence[idx]
 
     def record_hand(self, outcome: str):
-        # Predict and record hit/miss
+        # If alternator, only track alternation and hits/misses for that pattern
+        if self.alternator_sequence:
+            predicted = self.next_bet_choice()
+            hit = (outcome == predicted)
+            self.last_hit = hit
+            if hit:
+                self.total_hits += 1
+            else:
+                self.total_misses += 1
+            # Advance alternator index for next hand
+            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
+            return
+        # Non-alternator: Star 2.0 progression
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            # Reset progression only after two consecutive wins
+            # Reset after two consecutive wins
             if self.win_streak >= 2:
                 self._reset_progression()
         else:
@@ -61,12 +73,9 @@ class FriendPattern:
             # Advance progression on miss
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
-        # Advance alternator index regardless of hit or miss
-        if self.alternator_sequence:
-            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
 
     def _reset_progression(self):
-        """Helper to reset Star 2.0 progression counters."""
+        """Reset Star 2.0 progression counters."""
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
@@ -136,6 +145,7 @@ st.write('### Star 2.0 Sequence')
 st.dataframe(df_star, use_container_width=True)
 
 # Friend Dashboard
+st.write('### Friend Dashboard')
 df = session.get_state_df()
 t_df = df.set_index('Name').T
 t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
