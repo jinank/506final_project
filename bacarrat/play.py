@@ -43,106 +43,36 @@ class FriendPattern:
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
-    def record_hand(self, outcome: str):
-        # Predict and record hit/miss
+        def record_hand(self, outcome: str):
+        # Predict and record hit/miss for alternator patterns first
+        if self.alternator_sequence:
+            predicted = self.next_bet_choice()
+            hit = (outcome == predicted)
+            self.last_hit = hit
+            if hit:
+                self.total_hits += 1
+                self.win_streak += 1
+            else:
+                self.total_misses += 1
+                self.win_streak = 0
+            # Advance alternator index regardless of hit/miss
+            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
+            # Only reset Star progression after two consecutive hits
+            if self.win_streak >= 2:
+                self._reset_progression()
+            return
+
+        # Standard Star 2.0 progression for non-alternator patterns
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
-        # Update Star 2.0 progression on consecutive hits/misses
         if hit:
             self.total_hits += 1
             self.win_streak += 1
             if self.win_streak >= 2:
-                self.miss_count = 0
-                self.step = 0
+                self._reset_progression()
         else:
             self.total_misses += 1
             self.win_streak = 0
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
-        # Advance alternator index always
-        if self.alternator_sequence:
-            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
-
-# --- Session Model ---
-class Session:
-    def __init__(self):
-        self.unit = 10.0
-        self.history: List[str] = []
-        self.reset_patterns()
-
-    def reset_patterns(self):
-        patterns = ['banker_only', 'player_only',
-                    'alternator_start_banker', 'alternator_start_player']
-        self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(4)]
-        self.history = []
-
-    def add_hand(self, outcome: str):
-        self.history.append(outcome)
-        for f in self.friends:
-            f.record_hand(outcome)
-
-    def get_state_df(self) -> pd.DataFrame:
-        records = []
-        for f in self.friends:
-            records.append({
-                'Name': f.name,
-                'Pattern': f.pattern_type,
-                'Last Bet': 'Win' if f.last_hit else 'Loss',
-                'Miss Count': f.miss_count,
-                'Next Bet': f.next_bet_choice(),
-                'Next Amount': f.next_bet_amount(self.unit),
-                'Total Hits': f.total_hits,
-                'Total Misses': f.total_misses
-            })
-        return pd.DataFrame(records)
-
-# --- Streamlit UI ---
-st.set_page_config(layout='wide')
-if 'session' not in st.session_state:
-    st.session_state['session'] = Session()
-session = st.session_state['session']
-
-# Sidebar
-with st.sidebar:
-    st.title('Bakura 4-Friend MVP')
-    session.unit = st.number_input('Unit Size', 1.0, 100.0, value=session.unit)
-    if st.button('New Shoe'):
-        session.reset_patterns()
-
-# Record Hands Buttons
-col1, col2, col3 = st.columns(3)
-with col1:
-    if st.button('Record Banker'):
-        session.add_hand('B')
-with col2:
-    if st.button('Record Player'):
-        session.add_hand('P')
-with col3:
-    if st.button('Record Tie'):
-        session.add_hand('T')
-
-# Star 2.0 Grid Layout
-st.write('### Star 2.0 Sequence')
-steps = list(range(1,13))
-unit = session.unit
-bet_seq = [unit, unit*1.5, unit*2.5, unit*4, unit*6.5, unit*10.5,
-           unit*17, unit*27.5, unit*44.5, unit*72, unit*116, unit*188]
-df_star = pd.DataFrame([bet_seq], index=['Amount'], columns=steps)
-st.dataframe(df_star, use_container_width=True)
-
-# Friend Dashboard
-st.write('### Friend Dashboard')
-df = session.get_state_df()
-t_df = df.set_index('Name').T
-t_df.loc['History'] = [' '.join(session.history)]*len(t_df.columns)
-header = ['Metric'] + list(t_df.columns)
-values = [t_df.index.tolist()] + [t_df[col].tolist() for col in t_df.columns]
-fig = go.Figure(data=[go.Table(header=dict(values=header, fill_color='lightgrey'),
-                                 cells=dict(values=values, fill_color='white'))])
-st.plotly_chart(fig, use_container_width=True)
-
-# Summary
-total = sum(bet_seq)
-st.write('### Total Needed for 12-Step Limit')
-st.write(total)
