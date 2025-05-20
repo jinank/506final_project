@@ -44,23 +44,12 @@ class FriendPattern:
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
-    def record_hand(self, outcome: str):
-        # If alternator, only track alternation and hits/misses for that pattern
-        if self.alternator_sequence:
-            predicted = self.next_bet_choice()
-            hit = (outcome == predicted)
-            self.last_hit = hit
-            if hit:
-                self.total_hits += 1
-            else:
-                self.total_misses += 1
-            # Advance alternator index for next hand
-            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
-            return
-        # Non-alternator: Star 2.0 progression
+        def record_hand(self, outcome: str):
+        # Predict and determine hit/miss
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
+        # Update Star 2.0 progression for all friends
         if hit:
             self.total_hits += 1
             self.win_streak += 1
@@ -72,44 +61,12 @@ class FriendPattern:
             self.win_streak = 0
             # Advance progression on miss
             self.miss_count += 1
-            self.step = min(self.miss_count, 11)
-
-    def _reset_progression(self):
-        """Reset Star 2.0 progression counters."""
-        self.miss_count = 0
-        self.step = 0
-        self.win_streak = 0
-
-class Session:
-    def __init__(self):
-        self.unit = 10.0
-        self.history: List[str] = []
-        self.reset_patterns()
-
-    def reset_patterns(self):
-        patterns = ['banker_only', 'player_only',
-                    'alternator_start_banker', 'alternator_start_player']
-        self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(4)]
-        self.history = []
-
-    def add_hand(self, outcome: str):
-        self.history.append(outcome)
-        for f in self.friends:
-            f.record_hand(outcome)
-
-    def get_state_df(self) -> pd.DataFrame:
-        records = []
-        for f in self.friends:
-            records.append({
-                'Name': f.name,
-                'Pattern': f.pattern_type,
-                'Last Bet': 'Win' if f.last_hit else 'Loss',
-                'Miss Count': f.miss_count,
-                'Next Bet': f.next_bet_choice(),
-                'Next Amount': f.next_bet_amount(self.unit),
-                'Total Hits': f.total_hits,
-                'Total Misses': f.total_misses
-            })
+            # Use same length as multipliers in next_bet_amount
+            max_step = len([1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]) - 1
+            self.step = min(self.miss_count, max_step)
+        # Advance alternator index if applicable
+        if self.alternator_sequence:
+            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
         return pd.DataFrame(records)
 
 # --- Streamlit UI ---
