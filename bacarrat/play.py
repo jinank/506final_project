@@ -45,10 +45,10 @@ class FriendPattern:
 
         def record_hand(self, outcome: str):
         # Predict and record hit/miss for alternator patterns first
-            if self.alternator_sequence:
-                predicted = self.next_bet_choice()
-                hit = (outcome == predicted)
-                self.last_hit = hit
+        if self.alternator_sequence:
+            predicted = self.next_bet_choice()
+            hit = (outcome == predicted)
+            self.last_hit = hit
             if hit:
                 self.total_hits += 1
                 self.win_streak += 1
