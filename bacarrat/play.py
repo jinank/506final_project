@@ -9,68 +9,72 @@ class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
         self.pattern_type = pattern_type
+        # For Star 2.0
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
+        # For hit/miss
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
-        self.history_outcomes: List[str] = []  # track actual outcomes
+        # Alternator pattern state
+        if pattern_type == 'alternator_start_banker':
+            self.alternator_expected = 'B'
+        elif pattern_type == 'alternator_start_player':
+            self.alternator_expected = 'P'
+        else:
+            self.alternator_expected = None
 
     def next_bet_choice(self) -> str:
+        # Priority: alternator patterns
+        if self.pattern_type.startswith('alternator') and self.alternator_expected:
+            return self.alternator_expected
+        # fixed patterns
         if self.pattern_type == 'banker_only':
             return 'B'
         if self.pattern_type == 'player_only':
             return 'P'
-        if self.pattern_type == 'alternator_start_banker':
-            # alternate B, P
-            return ['B', 'P'][self.miss_count % 2]
-        if self.pattern_type == 'alternator_start_player':
-            # alternate P, B
-            return ['P', 'B'][self.miss_count % 2]
+        # fallback
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        sequence = [unit, unit*1.5, unit*2.5, unit*4, unit*6.5, unit*10.5,
-                    unit*17, unit*27.5, unit*44.5, unit*72, unit*116, unit*188]
-        idx = min(self.step, len(sequence) - 1)
+        sequence = [unit, unit*1.5, unit*2.5, unit*4, unit*6.5,
+                    unit*10.5, unit*17, unit*27.5, unit*44.5,
+                    unit*72, unit*116, unit*188]
+        idx = min(self.step, len(sequence)-1)
         return sequence[idx]
 
     def record_hand(self, outcome: str):
-        # Track actual outcome
-        self.history_outcomes.append(outcome)
-        # Special 2-win detection for alternator patterns
-        if self.pattern_type == 'alternator_start_banker' and len(self.history_outcomes) >= 2:
-            if self.history_outcomes[-2:] == ['B', 'P']:
-                self.last_hit = True
-                self.total_hits += 2
-                self.miss_count = 0
-                self.step = 0
-                self.win_streak = 2
-                return
-        if self.pattern_type == 'alternator_start_player' and len(self.history_outcomes) >= 2:
-            if self.history_outcomes[-2:] == ['P', 'B']:
-                self.last_hit = True
-                self.total_hits += 2
-                self.miss_count = 0
-                self.step = 0
-                self.win_streak = 2
-                return
-        # Fallback to standard hit/miss logic
+        # Determine predicted
         predicted = self.next_bet_choice()
+        # Hit or miss
         hit = (outcome == predicted)
         self.last_hit = hit
+        # Update counts
         if hit:
             self.total_hits += 1
             self.win_streak += 1
+            # If two consecutive hits, reset Star progression
             if self.win_streak >= 2:
                 self.miss_count = 0
                 self.step = 0
         else:
             self.total_misses += 1
             self.win_streak = 0
+            # Advance Star on miss
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
+        # Update alternator expected on hit/miss
+        if self.alternator_expected:
+            if hit:
+                # flip expected
+                self.alternator_expected = 'P' if self.alternator_expected == 'B' else 'B'
+            else:
+                # reset to initial
+                if self.pattern_type == 'alternator_start_banker':
+                    self.alternator_expected = 'B'
+                else:
+                    self.alternator_expected = 'P'
 
 # --- Session Model ---
     def __init__(self):
