@@ -45,22 +45,22 @@ class FriendPattern:
 
         def record_hand(self, outcome: str):
         # Predict and record hit/miss for alternator patterns first
-        if self.alternator_sequence:
-            predicted = self.next_bet_choice()
-            hit = (outcome == predicted)
-            self.last_hit = hit
-            if hit:
-                self.total_hits += 1
-                self.win_streak += 1
-            else:
-                self.total_misses += 1
-                self.win_streak = 0
-            # Advance alternator index regardless of hit/miss
-            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
-            # Only reset Star progression after two consecutive hits
-            if self.win_streak >= 2:
-                self._reset_progression()
-            return
+            if self.alternator_sequence:
+                predicted = self.next_bet_choice()
+                hit = (outcome == predicted)
+                self.last_hit = hit
+                if hit:
+                    self.total_hits += 1
+                    self.win_streak += 1
+                else:
+                    self.total_misses += 1
+                    self.win_streak = 0
+                # Advance alternator index regardless of hit/miss
+                self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
+                # Only reset Star progression after two consecutive hits
+                if self.win_streak >= 2:
+                    self._reset_progression()
+        return
 
         # Standard Star 2.0 progression for non-alternator patterns
         predicted = self.next_bet_choice()
