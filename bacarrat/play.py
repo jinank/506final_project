@@ -17,18 +17,19 @@ class FriendPattern:
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
-        # Alternator pattern state: initial expected
+        # Alternator pattern sequence and index
         if pattern_type == 'alternator_start_banker':
-            self.alternator_expected = 'B'
+            self.alternator_sequence = ['B', 'P']
         elif pattern_type == 'alternator_start_player':
-            self.alternator_expected = 'P'
+            self.alternator_sequence = ['P', 'B']
         else:
-            self.alternator_expected = None
+            self.alternator_sequence = None
+        self.alternator_index = 0
 
     def next_bet_choice(self) -> str:
-        # Alternator patterns use expected sequence
-        if self.pattern_type.startswith('alternator') and self.alternator_expected:
-            return self.alternator_expected
+        # Alternator patterns use fixed sequence regardless of hit/miss
+        if self.alternator_sequence:
+            return self.alternator_sequence[self.alternator_index]
         # Fixed patterns
         if self.pattern_type == 'banker_only':
             return 'B'
@@ -37,41 +38,31 @@ class FriendPattern:
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        # Custom Star progression (unit multiples)
         multipliers = [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
         sequence = [unit * m for m in multipliers]
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
     def record_hand(self, outcome: str):
-        # Determine predicted vs actual
+        # Predict and record hit/miss
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
-
+        # Update Star 2.0 progression on consecutive hits/misses
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            # Reset progression after two consecutive wins
             if self.win_streak >= 2:
-                self._reset_progression()
-            # Flip alternator sequence on hit
-            if self.pattern_type.startswith('alternator') and self.alternator_expected:
-                self.alternator_expected = 'P' if self.alternator_expected == 'B' else 'B'
+                self.miss_count = 0
+                self.step = 0
         else:
             self.total_misses += 1
-            # Reset win streak
             self.win_streak = 0
-            # Advance progression only on a miss
             self.miss_count += 1
-            self.step = min(self.miss_count, len([unit for unit in []]) if False else 11)
-            # Keep alternator_expected unchanged on miss
-
-    def _reset_progression(self):
-        """Helper to reset Star progression counters."""
-        self.miss_count = 0
-        self.step = 0
-        self.win_streak = 0
+            self.step = min(self.miss_count, 11)
+        # Advance alternator index always
+        if self.alternator_sequence:
+            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
 
 # --- Session Model ---
 class Session:
