@@ -28,13 +28,23 @@ class FriendPattern:
             self.sequence = ['P', 'B']
             self.seq_index = 0
         elif pattern_type == 'terrific_twos':
-            self.sequence = ['B','P','P','B','B','P','P','B','B']
+            self.sequence = None
             self.seq_index = 0
+            self.free_outcome = None
         else:
             self.sequence = None
             self.seq_index = None
 
     def next_bet_choice(self) -> str:
+        # Terrific twos: wait for first non-tie outcome
+        if self.pattern_type == 'terrific_twos':
+            if self.free_outcome is None:
+                return ''  # free hand, no bet
+            return self.sequence[self.seq_index]
+        # Strict alternator or fixed pattern
+        if self.sequence is not None:
+            return self.sequence[self.seq_index]
+        return 'B' if self.pattern_type == 'banker_only' else 'P'(self) -> str:
         # If a sequence is defined, use its current element
         if self.sequence is not None:
             return self.sequence[self.seq_index]
@@ -56,7 +66,47 @@ class FriendPattern:
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
-    def record_hand(self, outcome: str, unit: float):
+        def record_hand(self, outcome: str, unit: float):
+        # Terrific twos: capture first free hand to build sequence
+        if self.pattern_type == 'terrific_twos':
+            # On first non-tie outcome, initialize sequence based on outcome
+            if self.free_outcome is None and outcome in ['B','P']:
+                self.free_outcome = outcome
+                if outcome == 'B':
+                    self.sequence = ['B','P','P','B','B','P','P','B']
+                else:
+                    self.sequence = ['P','P','B','B','P','P','B','B']
+                self.seq_index = 0
+                return
+        # Store last bet for potential doubling
+        self.last_bet_amount = self.next_bet_amount(unit)
+        predicted = self.next_bet_choice()
+        # If no bet (terrific twos waiting), skip progression
+        if predicted == '':
+            # advance sequence index only when initialized
+            if self.sequence:
+                # do not increment index on free hand
+                pass
+            return
+        hit = (outcome == predicted)
+        self.last_hit = hit
+        # Star 2.0 progression
+        if hit:
+            self.total_hits += 1
+            self.win_streak += 1
+            if self.win_streak == 1 and self.last_bet_amount != unit:
+                self.double_next = True
+            if self.win_streak >= 2:
+                self._reset_progression()
+        else:
+            self.total_misses += 1
+            self.win_streak = 0
+            self.miss_count += 1
+            max_step = len([1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]) - 1
+            self.step = min(self.miss_count, max_step)
+        # Advance sequence index if pattern uses sequence
+        if self.sequence is not None:
+            self.seq_index = (self.seq_index + 1) % len(self.sequence)
         # Store last bet for potential doubling
         self.last_bet_amount = self.next_bet_amount(unit)
         predicted = self.next_bet_choice()
