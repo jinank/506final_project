@@ -40,15 +40,15 @@ class FriendPattern:
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
-    def record_hand(self, outcome: str):
+        def record_hand(self, outcome: str):
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
-        # Star 2.0 progression
+        # Star 2.0 progression: require exactly two consecutive wins to reset
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            if self.win_streak >= 2:
+            if self.win_streak == 2:
                 self._reset_progression()
         else:
             self.total_misses += 1
@@ -57,6 +57,9 @@ class FriendPattern:
             max_step = len([1,1.5,2.5,2.5,5,7.5,10,12.5,17.5,22.5,30]) - 1
             self.step = min(self.miss_count, max_step)
         # Advance alternator pointer if used
+        if self.alternator_sequence is not None:
+            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
+
         if self.alternator_sequence is not None:
             self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
 
