@@ -45,11 +45,13 @@ class FriendPattern:
     def next_bet_choice(self) -> str:
         # Terrific Twos: free until first outcome, then fixed sequence
         if self.pattern_type == 'terrific_twos':
-            if self.free_outcome is None: return ''
+            if self.free_outcome is None:
+                return ''
             return self.sequence[self.seq_index]
         # Chop: free until first outcome, then bet opposite of last outcome
         if self.pattern_type == 'chop':
-            if self.free_outcome is None: return ''
+            if self.free_outcome is None:
+                return ''
             return 'P' if self.last_outcome == 'B' else 'B'
         # Alternators follow their sequence
         if self.sequence is not None:
@@ -62,19 +64,17 @@ class FriendPattern:
             self.double_next = False
             return self.last_bet_amount * 2
         # Star 2.0 multipliers (12-step)
-        mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
-        seq = [unit * m for m in mults]
+        self.mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+        seq = [unit * m for m in self.mults]
         idx = min(self.step, len(seq)-1)
         return seq[idx]
 
-        def record_hand(self, outcome: str, unit: float):
-        # define Star multipliers for reuse
-            mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+    def record_hand(self, outcome: str, unit: float):
         # 1) Terrific Twos init
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None and outcome in ['B','P']:
                 self.free_outcome = outcome
-                base,alt = outcome, 'P' if outcome=='B' else 'B'
+                base, alt = outcome, 'P' if outcome=='B' else 'B'
                 self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
                 self.seq_index = 0
                 return
@@ -84,11 +84,11 @@ class FriendPattern:
                 self.free_outcome = outcome
                 self.last_outcome = outcome
                 return
-        # 3) Determine predicted
+        # 3) Predict
         predicted = self.next_bet_choice()
-        if predicted == '':  # still free hand
+        if predicted == '':
             return
-        # 4) First actual bet: skip miss progression
+        # 4) First real bet: record hit/miss but skip miss_count and step
         hit = (outcome == predicted)
         self.last_hit = hit
         if self.first_bet:
@@ -97,12 +97,11 @@ class FriendPattern:
                 self.total_hits += 1
                 self.win_streak += 1
             else:
-                # do not count miss_count
                 self.total_misses += 1
                 self.win_streak = 0
-            # Advance pattern pointer
+            # Advance sequence pointer
             if self.sequence:
-                self.seq_index = (self.seq_index+1)%len(self.sequence)
+                self.seq_index = (self.seq_index + 1) % len(self.sequence)
             if self.pattern_type == 'chop':
                 self.last_outcome = outcome
             return
@@ -111,23 +110,26 @@ class FriendPattern:
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            if self.win_streak==1 and self.last_bet_amount!=unit:
-                self.double_next=True
-            if self.win_streak>=2:
+            if self.win_streak == 1 and self.last_bet_amount != unit:
+                self.double_next = True
+            if self.win_streak >= 2:
                 self._reset_progression()
         else:
             self.total_misses += 1
             self.win_streak = 0
             self.miss_count += 1
-            self.step = min(self.miss_count, len(mults)-1)
-        # 6) Advance pattern pointer
+            self.step = min(self.miss_count, len(self.mults)-1)
+        # 6) Advance pattern pointer and state
         if self.sequence:
-            self.seq_index = (self.seq_index+1)%len(self.sequence)
+            self.seq_index = (self.seq_index + 1) % len(self.sequence)
         if self.pattern_type=='chop':
             self.last_outcome = outcome
 
     def _reset_progression(self):
-        self.miss_count=0; self.step=0; self.win_streak=0; self.double_next=False
+        self.miss_count = 0
+        self.step = 0
+        self.win_streak = 0
+        self.double_next = False
 
 class Session:
     def __init__(self):
