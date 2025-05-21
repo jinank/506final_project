@@ -59,12 +59,12 @@ class FriendPattern:
         # 1) Terrific Twos free hand initialization
             if self.pattern_type == 'terrific_twos':
                 if self.free_outcome is None and outcome in ['B','P']:
-                self.free_outcome = outcome
-                base = outcome
-                alt = 'P' if base=='B' else 'B'
-                # Build 10-step two-pattern
-                self.sequence = [base, base, alt, alt, base, base, alt, alt, base, base]
-                self.seq_index = 0
+                    self.free_outcome = outcome
+                    base = outcome
+                    alt = 'P' if base=='B' else 'B'
+                    # Build 10-step two-pattern
+                    self.sequence = [base, base, alt, alt, base, base, alt, alt, base, base]
+                    self.seq_index = 0
                 return
         # 2) Prediction for actual bets
         predicted = self.next_bet_choice()
