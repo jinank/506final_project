@@ -69,8 +69,10 @@ class FriendPattern:
         idx = min(self.step, len(seq)-1)
         return seq[idx]
 
-    def record_hand(self, outcome: str, unit: float):
-        # 1) Terrific Twos init
+        def record_hand(self, outcome: str, unit: float):
+        # local Star multipliers for progression
+        mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+        # 1) Terrific Twos initialization
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None and outcome in ['B','P']:
                 self.free_outcome = outcome
@@ -78,17 +80,17 @@ class FriendPattern:
                 self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
                 self.seq_index = 0
                 return
-        # 2) Chop init
+        # 2) Chop initialization
         if self.pattern_type == 'chop':
             if self.free_outcome is None and outcome in ['B','P']:
                 self.free_outcome = outcome
                 self.last_outcome = outcome
                 return
-        # 3) Predict
+        # 3) Prediction
         predicted = self.next_bet_choice()
         if predicted == '':
             return
-        # 4) First real bet: record hit/miss but skip miss_count and step
+        # 4) First actual bet: record hit/miss but skip miss_count and step
         hit = (outcome == predicted)
         self.last_hit = hit
         if self.first_bet:
@@ -118,7 +120,7 @@ class FriendPattern:
             self.total_misses += 1
             self.win_streak = 0
             self.miss_count += 1
-            self.step = min(self.miss_count, len(self.mults)-1)
+            self.step = min(self.miss_count, len(mults)-1)
         # 6) Advance pattern pointer and state
         if self.sequence:
             self.seq_index = (self.seq_index + 1) % len(self.sequence)
