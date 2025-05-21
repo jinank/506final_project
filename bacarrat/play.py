@@ -69,7 +69,7 @@ class FriendPattern:
 
         def record_hand(self, outcome: str, unit: float):
         # define Star multipliers for reuse
-        mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+            mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
         # 1) Terrific Twos init
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None and outcome in ['B','P']:
