@@ -79,10 +79,14 @@ class Session:
         self.history: List[str] = []
         self.reset_patterns()
 
-    def reset_patterns(self):
-        patterns = ['banker_only', 'player_only',
-                    'alternator_start_banker', 'alternator_start_player']
-        self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(4)]
+        def reset_patterns(self):
+        # Only two friends now: banker_only and player_only
+        patterns = [
+            'banker_only',
+            'player_only'
+        ]
+        self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
+        self.history = [] {i+1}', patterns[i]) for i in range(4)]
         self.history = []
 
     def add_hand(self, outcome: str):
