@@ -142,21 +142,37 @@ t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
 header = ['Metric'] + list(t_df.columns)
 values = [t_df.index.tolist()] + [t_df[col].tolist() for col in t_df.columns]
 num_rows = len(values[0])
-# Build cell colors: only highlight Next Bet and Next Amount rows per friend
+# Build cell colors: highlight Next Bet and Next Amount only if Miss Count >= 5
 cell_colors = []
-# Metric column always white
+# Metric column
 cell_colors.append(['white'] * num_rows)
-# For each friend column
 for col in t_df.columns:
+    miss_val = t_df.at['Miss Count', col]
     col_colors = []
     for metric in t_df.index:
-        if metric in ['Next Bet', 'Next Amount']:
+        if metric in ['Next Bet', 'Next Amount'] and miss_val >= 5:
             col_colors.append('lightgreen')
         else:
             col_colors.append('white')
     cell_colors.append(col_colors)
 
 fig = go.Figure(data=[
+    go.Table(
+        header=dict(
+            values=header,
+            fill_color='darkblue',
+            font=dict(color='white', size=14),
+            align='center'
+        ),
+        cells=dict(
+            values=values,
+            fill_color=cell_colors,
+            font=dict(color='black', size=12),
+            align='center',
+            height=30
+        )
+    )
+]) go.Figure(data=[
     go.Table(
         header=dict(
             values=header,
