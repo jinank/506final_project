@@ -141,8 +141,8 @@ with c3:
 
 # Star 2.0 Sequence Layout
 df_star = pd.DataFrame([
-    [session.unit * m for m in [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]]
-], index=['Bet Amount'], columns=list(range(1, 12)))
+    [session.unit * m for m in [1, 1.5, 2.5, 2.5, 5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]]
+], index=['Bet Amount'], columns=list(range(1, 13)))
 st.write('### Star 2.0 Sequence')
 st.dataframe(df_star, use_container_width=True)
 
