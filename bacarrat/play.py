@@ -55,37 +55,38 @@ class FriendPattern:
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
-    def record_hand(self, outcome: str, unit: float):
-        # Terrific Twos initialization
+        def record_hand(self, outcome: str, unit: float):
+        # 1) Terrific Twos free hand initialization
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None and outcome in ['B','P']:
                 self.free_outcome = outcome
                 base = outcome
                 alt = 'P' if base=='B' else 'B'
-                self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
+                # Build 10-step two-pattern
+                self.sequence = [base, base, alt, alt, base, base, alt, alt, base, base]
                 self.seq_index = 0
                 return
+        # 2) Prediction for actual bets
         predicted = self.next_bet_choice()
         if predicted == '':
-            return
-        # Determine last bet amount
-        self.last_bet_amount = self.next_bet_amount(unit)
+            return  # still waiting on free hand
+        # 3) Handle first actual bet: skip miss_count/progression
         hit = (outcome == predicted)
         self.last_hit = hit
-                # Skip miss_count and miss logging on first real bet
         if self.first_bet:
             self.first_bet = False
             if hit:
                 self.total_hits += 1
                 self.win_streak += 1
             else:
-                # Do not log misses on first bet
+                self.total_misses += 1
                 self.win_streak = 0
-            # Advance sequence pointer
+            # Advance sequence pointer if sequence
             if self.sequence is not None:
                 self.seq_index = (self.seq_index + 1) % len(self.sequence)
             return
-        # Star 2.0 progression
+        # 4) Standard Star 2.0 progression with double-on-first-win
+        self.last_bet_amount = self.next_bet_amount(unit)
         if hit:
             self.total_hits += 1
             self.win_streak += 1
@@ -99,6 +100,7 @@ class FriendPattern:
             self.miss_count += 1
             max_step = len([1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]) - 1
             self.step = min(self.miss_count, max_step)
+        # 5) Advance sequence pointer if sequence
         if self.sequence is not None:
             self.seq_index = (self.seq_index + 1) % len(self.sequence)
 
