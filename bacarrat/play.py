@@ -57,7 +57,7 @@ class FriendPattern:
 
         def record_hand(self, outcome: str, unit: float):
         # 1) Terrific Twos free hand initialization
-        if self.pattern_type == 'terrific_twos':
+            if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None and outcome in ['B','P']:
                 self.free_outcome = outcome
                 base = outcome
