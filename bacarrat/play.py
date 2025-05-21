@@ -19,7 +19,6 @@ class FriendPattern:
         self.total_misses = 0
 
     def next_bet_choice(self) -> str:
-        # Fixed patterns
         if self.pattern_type == 'banker_only':
             return 'B'
         if self.pattern_type == 'player_only':
@@ -27,7 +26,6 @@ class FriendPattern:
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        # Custom Star 2.0 multipliers
         multipliers = [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
         sequence = [unit * m for m in multipliers]
         idx = min(self.step, len(sequence) - 1)
@@ -40,19 +38,16 @@ class FriendPattern:
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            # Reset progression after two consecutive wins
             if self.win_streak >= 2:
                 self._reset_progression()
         else:
             self.total_misses += 1
             self.win_streak = 0
-            # Advance progression on miss
             self.miss_count += 1
             max_step = len([1,1.5,2.5,2.5,5,7.5,10,12.5,17.5,22.5,30]) - 1
             self.step = min(self.miss_count, max_step)
 
     def _reset_progression(self):
-        """Reset Star progression counters."""
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
@@ -64,7 +59,6 @@ class Session:
         self.reset_patterns()
 
     def reset_patterns(self):
-        # Only two friends: banker and player patterns
         patterns = ['banker_only', 'player_only']
         self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
         self.history = []
@@ -121,15 +115,31 @@ df_star = pd.DataFrame([
 st.write('### Star 2.0 Sequence')
 st.dataframe(df_star, use_container_width=True)
 
-# Friend Dashboard
+# Friend Dashboard with conditional highlight
+st.write('### Friend Dashboard')
 df = session.get_state_df()
 t_df = df.set_index('Name').T
-t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
+# Append history row
+ t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
+# Prepare header and values
 header = ['Metric'] + list(t_df.columns)
 values = [t_df.index.tolist()] + [t_df[col].tolist() for col in t_df.columns]
+# Build cell colors: highlight entire friend column green if Miss Count >= 4
+num_rows = len(values[0])
+cell_colors = []
+# First column (metrics) always white
+cell_colors.append(['white'] * num_rows)
+# Then each friend column
+for col in t_df.columns:
+    miss = t_df.at['Miss Count', col]
+    color = 'lightgreen' if miss >= 5 else 'white'
+    cell_colors.append([color] * num_rows)
+# Transpose cell_colors for go.Table (expects list per column)
 fig = go.Figure(data=[
-    go.Table(header=dict(values=header, fill_color='lightgrey'),
-             cells=dict(values=values, fill_color='white'))
+    go.Table(
+        header=dict(values=header, fill_color='lightgrey'),
+        cells=dict(values=values, fill_color=cell_colors)
+    )
 ])
 st.plotly_chart(fig, use_container_width=True)
 
