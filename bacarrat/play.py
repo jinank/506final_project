@@ -17,7 +17,7 @@ class FriendPattern:
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
-        # Alternator pattern state
+        # Alternator sequence and pointer
         if pattern_type == 'alternator_start_banker':
             self.alternator_sequence = ['B', 'P']
             self.alternator_index = 0
@@ -29,25 +29,18 @@ class FriendPattern:
             self.alternator_index = None
 
     def next_bet_choice(self) -> str:
-        # Alternator pattern: fixed sequence BP or PB
+        # Strict alternator or fixed pattern
         if self.alternator_sequence is not None:
             return self.alternator_sequence[self.alternator_index]
-        # Fixed patterns
-        if self.pattern_type == 'banker_only':
-            return 'B'
-        if self.pattern_type == 'player_only':
-            return 'P'
-        return 'B'
+        return 'B' if self.pattern_type == 'banker_only' else 'P'
 
     def next_bet_amount(self, unit: float) -> float:
-        # Custom Star 2.0 multipliers
         multipliers = [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
         sequence = [unit * m for m in multipliers]
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
     def record_hand(self, outcome: str):
-        # Determine hit/miss
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
@@ -63,7 +56,7 @@ class FriendPattern:
             self.miss_count += 1
             max_step = len([1,1.5,2.5,2.5,5,7.5,10,12.5,17.5,22.5,30]) - 1
             self.step = min(self.miss_count, max_step)
-        # Advance alternator index if applicable
+        # Advance alternator pointer if used
         if self.alternator_sequence is not None:
             self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
 
@@ -79,7 +72,6 @@ class Session:
         self.reset_patterns()
 
     def reset_patterns(self):
-        # Four friends: banker, player, BP alternator, PB alternator
         patterns = [
             'banker_only',
             'player_only',
@@ -123,14 +115,14 @@ with st.sidebar:
         session.reset_patterns()
 
 # Hand input buttons
-cols = st.columns(3)
-with cols[0]:
+c1, c2, c3 = st.columns(3)
+with c1:
     if st.button('Record Banker'):
         session.add_hand('B')
-with cols[1]:
+with c2:
     if st.button('Record Player'):
         session.add_hand('P')
-with cols[2]:
+with c3:
     if st.button('Record Tie'):
         session.add_hand('T')
 
@@ -141,27 +133,48 @@ df_star = pd.DataFrame([
 st.write('### Star 2.0 Sequence')
 st.dataframe(df_star, use_container_width=True)
 
-# Friend Dashboard with highlight after 4 misses
+# Friend Dashboard with Next Bet highlight
 st.write('### Friend Dashboard')
 df = session.get_state_df()
 t_df = df.set_index('Name').T
 t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
+# Prepare Plotly table
 header = ['Metric'] + list(t_df.columns)
 values = [t_df.index.tolist()] + [t_df[col].tolist() for col in t_df.columns]
 num_rows = len(values[0])
-# Build cell colors: highlight entire friend column green if Miss Count > 4
+# Build cell colors: only highlight Next Bet and Next Amount rows per friend
 cell_colors = []
+# Metric column always white
 cell_colors.append(['white'] * num_rows)
+# For each friend column
 for col in t_df.columns:
-    miss = t_df.at['Miss Count', col]
-    color = 'lightgreen' if miss > 4 else 'white'
-    cell_colors.append([color] * num_rows)
+    col_colors = []
+    for metric in t_df.index:
+        if metric in ['Next Bet', 'Next Amount']:
+            col_colors.append('lightgreen')
+        else:
+            col_colors.append('white')
+    cell_colors.append(col_colors)
+
 fig = go.Figure(data=[
     go.Table(
-        header=dict(values=header, fill_color='lightgrey'),
-        cells=dict(values=values, fill_color=cell_colors)
+        header=dict(
+            values=header,
+            fill_color='darkblue',
+            font=dict(color='white', size=14),
+            align='center'
+        ),
+        cells=dict(
+            values=values,
+            fill_color=cell_colors,
+            font=dict(color='black', size=12),
+            align='center',
+            height=30
+        )
     )
 ])
+# Expand table size
+fig.update_layout(height=400)
 st.plotly_chart(fig, use_container_width=True)
 
 # Summary
