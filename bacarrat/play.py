@@ -1,4 +1,4 @@
-# Bakura 3-Friend MVP with Star 2.0 Grid Layout
+# Bakura 4-Friend MVP with Star 2.0 Grid Layout
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -21,13 +21,16 @@ class FriendPattern:
         if pattern_type == 'alternator_start_banker':
             self.alternator_sequence = ['B', 'P']
             self.alternator_index = 0
+        elif pattern_type == 'alternator_start_player':
+            self.alternator_sequence = ['P', 'B']
+            self.alternator_index = 0
         else:
             self.alternator_sequence = None
             self.alternator_index = None
 
     def next_bet_choice(self) -> str:
-        # Alternator pattern: B->P sequence always
-        if self.alternator_sequence:
+        # Alternator pattern: fixed sequence BP or PB
+        if self.alternator_sequence is not None:
             return self.alternator_sequence[self.alternator_index]
         # Fixed patterns
         if self.pattern_type == 'banker_only':
@@ -37,7 +40,7 @@ class FriendPattern:
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        # Custom Star progression multipliers
+        # Custom Star 2.0 multipliers
         multipliers = [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
         sequence = [unit * m for m in multipliers]
         idx = min(self.step, len(sequence) - 1)
@@ -48,6 +51,7 @@ class FriendPattern:
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
+        # Star 2.0 progression
         if hit:
             self.total_hits += 1
             self.win_streak += 1
@@ -60,7 +64,7 @@ class FriendPattern:
             max_step = len([1,1.5,2.5,2.5,5,7.5,10,12.5,17.5,22.5,30]) - 1
             self.step = min(self.miss_count, max_step)
         # Advance alternator index if applicable
-        if self.alternator_sequence:
+        if self.alternator_sequence is not None:
             self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
 
     def _reset_progression(self):
@@ -75,8 +79,13 @@ class Session:
         self.reset_patterns()
 
     def reset_patterns(self):
-        # Three friends: banker, player, alternator
-        patterns = ['banker_only', 'player_only', 'alternator_start_banker']
+        # Four friends: banker, player, BP alternator, PB alternator
+        patterns = [
+            'banker_only',
+            'player_only',
+            'alternator_start_banker',
+            'alternator_start_player'
+        ]
         self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
         self.history = []
 
@@ -100,28 +109,28 @@ class Session:
             })
         return pd.DataFrame(data)
 
-# --- Streamlit UI ---
+# --- Streamlit App ---
 st.set_page_config(layout='wide')
 if 'session' not in st.session_state:
     st.session_state['session'] = Session()
 session = st.session_state['session']
 
-# Sidebar
+# Sidebar controls
 with st.sidebar:
-    st.title('Bakura 3-Friend MVP')
+    st.title('Bakura 4-Friend MVP')
     session.unit = st.number_input('Unit Size', min_value=1.0, step=0.5, value=session.unit)
     if st.button('New Shoe'):
         session.reset_patterns()
 
 # Hand input buttons
-c1, c2, c3 = st.columns(3)
-with c1:
+cols = st.columns(3)
+with cols[0]:
     if st.button('Record Banker'):
         session.add_hand('B')
-with c2:
+with cols[1]:
     if st.button('Record Player'):
         session.add_hand('P')
-with c3:
+with cols[2]:
     if st.button('Record Tie'):
         session.add_hand('T')
 
