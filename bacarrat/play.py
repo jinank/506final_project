@@ -60,7 +60,7 @@ class FriendPattern:
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
-    def record_hand(self, outcome: str, unit: float):
+        def record_hand(self, outcome: str, unit: float):
         # Terrific Twos initialization
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None and outcome in ['B','P']:
@@ -71,45 +71,50 @@ class FriendPattern:
                 self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
                 self.seq_index = 0
                 return
-        # Determine predicted and last bet
+        # Determine predicted
         predicted = self.next_bet_choice()
+        # Free hand for Terrific Twos
         if predicted == '':
-            # free hand, skip all progression
             return
-        self.last_bet_amount = self.next_bet_amount(unit)
-        hit = (outcome == predicted)
-        self.last_hit = hit
-        # Skip miss count update on first hand
+        # Skip miss count update on first actual bet
         if self.first_hand:
             self.first_hand = False
-            # record hit/miss stats, but do not adjust miss_count/step
+            # record hit/miss but do NOT update miss_count or step
+            hit = (outcome == predicted)
+            self.last_hit = hit
             if hit:
                 self.total_hits += 1
                 self.win_streak += 1
             else:
                 self.total_misses += 1
                 self.win_streak = 0
-            # advance sequence index if used
+            # Advance sequence if applicable
             if self.sequence is not None:
                 self.seq_index = (self.seq_index + 1) % len(self.sequence)
             return
+        # Record last bet amount for doubling
+        self.last_bet_amount = self.next_bet_amount(unit)
+        hit = (outcome == predicted)
+        self.last_hit = hit
         # Star 2.0 progression logic
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            # Double next after first win (if not base unit)
-            if self.win_streak==1 and self.last_bet_amount!=unit:
-                self.double_next=True
+            # Double on first win if not base unit
+            if self.win_streak == 1 and self.last_bet_amount != unit:
+                self.double_next = True
             # Reset after two consecutive wins
-            if self.win_streak>=2:
+            if self.win_streak >= 2:
                 self._reset_progression()
         else:
             self.total_misses += 1
             self.win_streak = 0
             self.miss_count += 1
-            max_step = len([1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30])-1
+            max_step = len([1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]) - 1
             self.step = min(self.miss_count, max_step)
         # Advance sequence index if pattern uses sequence
+        if self.sequence is not None:
+            self.seq_index = (self.seq_index + 1) % len(self.sequence)
         if self.sequence is not None:
             self.seq_index = (self.seq_index + 1) % len(self.sequence)
 
