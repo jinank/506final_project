@@ -72,14 +72,14 @@ class FriendPattern:
         self.last_bet_amount = self.next_bet_amount(unit)
         hit = (outcome == predicted)
         self.last_hit = hit
-        # Skip miss_count on first real bet
+                # Skip miss_count and miss logging on first real bet
         if self.first_bet:
             self.first_bet = False
             if hit:
                 self.total_hits += 1
                 self.win_streak += 1
             else:
-                self.total_misses += 1
+                # Do not log misses on first bet
                 self.win_streak = 0
             # Advance sequence pointer
             if self.sequence is not None:
