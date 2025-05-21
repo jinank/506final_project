@@ -120,7 +120,7 @@ st.write('### Friend Dashboard')
 df = session.get_state_df()
 t_df = df.set_index('Name').T
 # Append history row
- t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
+t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
 # Prepare header and values
 header = ['Metric'] + list(t_df.columns)
 values = [t_df.index.tolist()] + [t_df[col].tolist() for col in t_df.columns]
