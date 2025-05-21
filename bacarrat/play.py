@@ -42,7 +42,7 @@ class FriendPattern:
             self.double_next = False
             return self.last_bet_amount * 2
         # Standard Star 2.0 multipliers
-        multipliers = [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
+        multipliers = [1, 1.5, 2.5, 2.5, 5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
         sequence = [unit * m for m in multipliers]
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
