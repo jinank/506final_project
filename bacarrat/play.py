@@ -28,9 +28,10 @@ class FriendPattern:
             self.sequence = ['P', 'B']
             self.seq_index = 0
         elif pattern_type == 'terrific_twos':
-            # sequence set after first non-tie outcome
+            # wait for first free hand, then build two-pattern sequence
             self.sequence = None
             self.seq_index = 0
+            self.free_outcome = None
             self.free_outcome = None
         else:
             self.sequence = None
