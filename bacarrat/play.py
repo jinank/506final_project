@@ -1,4 +1,4 @@
-# Bakura 4-Friend MVP with Star 2.0 Grid Layout (Double-on-first-win)
+# Bakura 5-Friend MVP with Star 2.0 Grid Layout (Double-on-first-win)
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -9,7 +9,7 @@ class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
         self.pattern_type = pattern_type
-        # Star 2.0 tracking
+        # Star 2.0 progression tracking
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
@@ -17,27 +17,36 @@ class FriendPattern:
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
-        # Double next win flag and storage
+        # Double-on-first-win flag
         self.double_next = False
         self.last_bet_amount = 0
-        # Alternator sequence and pointer
+        # Sequence patterns
         if pattern_type == 'alternator_start_banker':
-            self.alternator_sequence = ['B', 'P']
-            self.alternator_index = 0
+            self.sequence = ['B', 'P']
+            self.seq_index = 0
         elif pattern_type == 'alternator_start_player':
-            self.alternator_sequence = ['P', 'B']
-            self.alternator_index = 0
+            self.sequence = ['P', 'B']
+            self.seq_index = 0
+        elif pattern_type == 'terrific_twos':
+            self.sequence = ['B','P','P','B','B','P','P','B','B']
+            self.seq_index = 0
         else:
-            self.alternator_sequence = None
-            self.alternator_index = None
+            self.sequence = None
+            self.seq_index = None
 
     def next_bet_choice(self) -> str:
-        if self.alternator_sequence is not None:
-            return self.alternator_sequence[self.alternator_index]
-        return 'B' if self.pattern_type == 'banker_only' else 'P'
+        # If a sequence is defined, use its current element
+        if self.sequence is not None:
+            return self.sequence[self.seq_index]
+        # Fixed patterns
+        if self.pattern_type == 'banker_only':
+            return 'B'
+        if self.pattern_type == 'player_only':
+            return 'P'
+        return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
-        # If flagged to double next, use stored last amount
+        # Double-on-first-win if flagged
         if self.double_next:
             self.double_next = False
             return self.last_bet_amount * 2
@@ -48,29 +57,28 @@ class FriendPattern:
         return sequence[idx]
 
     def record_hand(self, outcome: str, unit: float):
-        # Record last bet amount before outcome
+        # Store last bet for potential doubling
         self.last_bet_amount = self.next_bet_amount(unit)
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
+        # Star 2.0 progression
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            # After first win, flag double on next if not starting unit
             if self.win_streak == 1 and self.last_bet_amount != unit:
                 self.double_next = True
-            # On second consecutive win, reset progression
             if self.win_streak >= 2:
                 self._reset_progression()
         else:
             self.total_misses += 1
             self.win_streak = 0
             self.miss_count += 1
-            max_step = len([1,1.5,2.5,2.5,5,7.5,10,12.5,17.5,22.5,30]) - 1
+            max_step = len([1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]) - 1
             self.step = min(self.miss_count, max_step)
-        # Advance alternator pointer
-        if self.alternator_sequence is not None:
-            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
+        # Advance sequence index if pattern uses sequence
+        if self.sequence is not None:
+            self.seq_index = (self.seq_index + 1) % len(self.sequence)
 
     def _reset_progression(self):
         self.miss_count = 0
@@ -89,7 +97,8 @@ class Session:
             'banker_only',
             'player_only',
             'alternator_start_banker',
-            'alternator_start_player'
+            'alternator_start_player',
+            'terrific_twos'
         ]
         self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
         self.history = []
@@ -122,7 +131,7 @@ session = st.session_state['session']
 
 # Sidebar controls
 with st.sidebar:
-    st.title('Bakura 4-Friend MVP')
+    st.title('Bakura 5-Friend MVP')
     session.unit = st.number_input('Unit Size', min_value=1.0, step=0.5, value=session.unit)
     if st.button('New Shoe'):
         session.reset_patterns()
@@ -146,7 +155,7 @@ df_star = pd.DataFrame([
 st.write('### Star 2.0 Sequence')
 st.dataframe(df_star, use_container_width=True)
 
-# Friend Dashboard
+# Friend Dashboard with Next Bet highlight
 st.write('### Friend Dashboard')
 df = session.get_state_df()
 t_df = df.set_index('Name').T
@@ -154,7 +163,6 @@ t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
 header = ['Metric'] + list(t_df.columns)
 values = [t_df.index.tolist()] + [t_df[col].tolist() for col in t_df.columns]
 num_rows = len(values[0])
-# Highlight Next Bet and Next Amount only if Miss Count >=5
 cell_colors = []
 cell_colors.append(['white'] * num_rows)
 for col in t_df.columns:
@@ -172,7 +180,7 @@ fig = go.Figure(data=[
         cells=dict(values=values, fill_color=cell_colors, font=dict(color='black', size=12), align='center', height=30)
     )
 ])
-fig.update_layout(height=400)
+fig.update_layout(height=450)
 st.plotly_chart(fig, use_container_width=True)
 
 # Summary
