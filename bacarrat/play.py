@@ -172,22 +172,6 @@ fig = go.Figure(data=[
             height=30
         )
     )
-]) go.Figure(data=[
-    go.Table(
-        header=dict(
-            values=header,
-            fill_color='darkblue',
-            font=dict(color='white', size=14),
-            align='center'
-        ),
-        cells=dict(
-            values=values,
-            fill_color=cell_colors,
-            font=dict(color='black', size=12),
-            align='center',
-            height=30
-        )
-    )
 ])
 # Expand table size
 fig.update_layout(height=400)
