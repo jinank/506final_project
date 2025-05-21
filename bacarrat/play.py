@@ -1,4 +1,4 @@
-# Simplified Bakura 2-Friend MVP with Star 2.0 Grid Layout
+# Bakura 3-Friend MVP with Star 2.0 Grid Layout
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -17,8 +17,19 @@ class FriendPattern:
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
+        # Alternator pattern state
+        if pattern_type == 'alternator_start_banker':
+            self.alternator_sequence = ['B', 'P']
+            self.alternator_index = 0
+        else:
+            self.alternator_sequence = None
+            self.alternator_index = None
 
     def next_bet_choice(self) -> str:
+        # Alternator pattern: B->P sequence always
+        if self.alternator_sequence:
+            return self.alternator_sequence[self.alternator_index]
+        # Fixed patterns
         if self.pattern_type == 'banker_only':
             return 'B'
         if self.pattern_type == 'player_only':
@@ -26,12 +37,14 @@ class FriendPattern:
         return 'B'
 
     def next_bet_amount(self, unit: float) -> float:
+        # Custom Star progression multipliers
         multipliers = [1, 1.5, 2.5, 2.5, 5, 7.5, 10, 12.5, 17.5, 22.5, 30]
         sequence = [unit * m for m in multipliers]
         idx = min(self.step, len(sequence) - 1)
         return sequence[idx]
 
     def record_hand(self, outcome: str):
+        # Determine hit/miss
         predicted = self.next_bet_choice()
         hit = (outcome == predicted)
         self.last_hit = hit
@@ -46,6 +59,9 @@ class FriendPattern:
             self.miss_count += 1
             max_step = len([1,1.5,2.5,2.5,5,7.5,10,12.5,17.5,22.5,30]) - 1
             self.step = min(self.miss_count, max_step)
+        # Advance alternator index if applicable
+        if self.alternator_sequence:
+            self.alternator_index = (self.alternator_index + 1) % len(self.alternator_sequence)
 
     def _reset_progression(self):
         self.miss_count = 0
@@ -59,7 +75,8 @@ class Session:
         self.reset_patterns()
 
     def reset_patterns(self):
-        patterns = ['banker_only', 'player_only']
+        # Three friends: banker, player, alternator
+        patterns = ['banker_only', 'player_only', 'alternator_start_banker']
         self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
         self.history = []
 
@@ -91,7 +108,7 @@ session = st.session_state['session']
 
 # Sidebar
 with st.sidebar:
-    st.title('Bakura 2-Friend MVP')
+    st.title('Bakura 3-Friend MVP')
     session.unit = st.number_input('Unit Size', min_value=1.0, step=0.5, value=session.unit)
     if st.button('New Shoe'):
         session.reset_patterns()
@@ -115,26 +132,21 @@ df_star = pd.DataFrame([
 st.write('### Star 2.0 Sequence')
 st.dataframe(df_star, use_container_width=True)
 
-# Friend Dashboard with conditional highlight
+# Friend Dashboard with highlight after 4 misses
 st.write('### Friend Dashboard')
 df = session.get_state_df()
 t_df = df.set_index('Name').T
-# Append history row
 t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
-# Prepare header and values
 header = ['Metric'] + list(t_df.columns)
 values = [t_df.index.tolist()] + [t_df[col].tolist() for col in t_df.columns]
-# Build cell colors: highlight entire friend column green if Miss Count >= 4
 num_rows = len(values[0])
+# Build cell colors: highlight entire friend column green if Miss Count > 4
 cell_colors = []
-# First column (metrics) always white
 cell_colors.append(['white'] * num_rows)
-# Then each friend column
 for col in t_df.columns:
     miss = t_df.at['Miss Count', col]
-    color = 'lightgreen' if miss >= 5 else 'white'
+    color = 'lightgreen' if miss > 4 else 'white'
     cell_colors.append([color] * num_rows)
-# Transpose cell_colors for go.Table (expects list per column)
 fig = go.Figure(data=[
     go.Table(
         header=dict(values=header, fill_color='lightgrey'),
