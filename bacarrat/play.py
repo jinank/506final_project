@@ -83,7 +83,7 @@ class FriendPattern:
             self.free_outcome = base
             self.history.append('')
             return
-                if p == 'one_two_one' and self.free_outcome is None and outcome in ('B','P'):
+        if p == 'one_two_one' and self.free_outcome is None and outcome in ('B','P'):
             base, alt = outcome, ('P' if outcome == 'B' else 'B')
             # One-Two-One pattern: bet opposite twice then same once, repeated
             self.sequence = [alt, alt, base] * 3
