@@ -229,5 +229,18 @@ fig.update_layout(height=550)
 st.plotly_chart(fig, use_container_width=True)
 
 # Summary
+total_needed = df_star.iloc[0].sum()
 st.write('### Total Needed for Star Progression')
-st.write(df_star.iloc[0].sum())
+st.write(total_needed)
+
+# Session Totals and Targets
+session_total_hits = sum(f.total_hits for f in session.friends)
+session_total_misses = sum(f.total_misses for f in session.friends)
+# Dynamic profit target and stop loss based on unit size (for unit=10: 20*10=200, 60*10=600)
+profit_target_units = 20
+stop_loss_units = 60
+profit_target = session.unit * profit_target_units
+stop_loss = session.unit * stop_loss_units
+st.write('### Session Summary')
+st.write(f"Total Wins: {session_total_hits}, Total Losses: {session_total_misses}")
+st.write(f"Profit Target: {profit_target_units} units ({profit_target}), Stop Loss: {stop_loss_units} units ({stop_loss})")
