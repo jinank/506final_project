@@ -46,23 +46,32 @@ class FriendPattern:
             self.sequence = None
             self.idx = 0
             self.free_outcome = None
+        elif pattern_type == 'one_two_one':
+            self.sequence = None
+            self.idx = 0
+            self.free_outcome = None
         else:
             self.sequence = None
             self.idx = None
 
     def next_bet_choice(self) -> str:
-        # Terrific Twos: free until first non-tie, then 10-step pattern
+        # Terrific Twos: free until first non-tie, then 10-step
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None:
                 return ''
             return self.sequence[self.idx]
-        # Two-Three-Two: free until first non-tie, then 8-step pattern
+        # Two-Three-Two: free until first non-tie, then 7-step
         if self.pattern_type == 'two_three_two':
             if self.free_outcome is None:
                 return ''
             return self.sequence[self.idx]
-        # Three Pattern: free until first non-tie, then 11-step pattern
+        # Three Pattern: free until first non-tie, then 11-step
         if self.pattern_type == 'three_pattern':
+            if self.free_outcome is None:
+                return ''
+            return self.sequence[self.idx]
+        # One-Two-One: free until first non-tie, then 9-step
+        if self.pattern_type == 'one_two_one':
             if self.free_outcome is None:
                 return ''
             return self.sequence[self.idx]
@@ -81,46 +90,41 @@ class FriendPattern:
         if self.double_next:
             self.double_next = False
             return self.last_bet_amount * 2
-        # Star 2.0 multipliers
+        # 12-step Star 2.0 multipliers
         multipliers = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
         seq = [unit * m for m in multipliers]
         return seq[min(self.step, len(seq)-1)]
 
     def record_hand(self, outcome: str, unit: float):
-        # Initialize Terrific Twos
-        if self.pattern_type == 'terrific_twos':
-            if self.free_outcome is None and outcome in ('B','P'):
-                base = outcome
-                alt = 'P' if base=='B' else 'B'
-                self.sequence = [base, base, alt, alt, base, base, alt, alt, base, base]
-                self.idx = 0
-                self.free_outcome = base
-                return
-        # Initialize Two-Three-Two
-        if self.pattern_type == 'two_three_two':
-            if self.free_outcome is None and outcome in ('B','P'):
-                base = outcome
-                alt = 'P' if base=='B' else 'B'
-                # pattern: base, alt, alt, base, alt, alt, base
-                self.sequence = [base, alt, alt, base, alt, alt, base]
-                self.idx = 0
-                self.free_outcome = base
-                return
-        # Initialize Three Pattern
-        if self.pattern_type == 'three_pattern':
-            if self.free_outcome is None and outcome in ('B','P'):
-                base = outcome
-                alt = 'P' if base=='B' else 'B'
-                # 11-step: base x3, alt x3, base x3, alt x2
-                self.sequence = [base, base, base, alt, alt, alt, base, base, base, alt, alt]
-                self.idx = 0
-                self.free_outcome = base
-                return
-        # Initialize Follow Last
-        if self.pattern_type == 'follow_last':
-            if self.last_outcome is None and outcome in ('B','P'):
-                self.last_outcome = outcome
-                return
+        # Initialize patterns
+        if self.pattern_type == 'terrific_twos' and self.free_outcome is None and outcome in ('B','P'):
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
+            self.idx = 0
+            self.free_outcome = base
+            return
+        if self.pattern_type == 'two_three_two' and self.free_outcome is None and outcome in ('B','P'):
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base,alt,alt,base,alt,alt,base]
+            self.idx = 0
+            self.free_outcome = base
+            return
+        if self.pattern_type == 'three_pattern' and self.free_outcome is None and outcome in ('B','P'):
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base]*3 + [alt]*3 + [base]*3 + [alt]*2
+            self.idx = 0
+            self.free_outcome = base
+            return
+        if self.pattern_type == 'one_two_one' and self.free_outcome is None and outcome in ('B','P'):
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            # 9-step: 1 base,2 alt,1 base,2 alt,1 base,2 alt
+            self.sequence = [base] + [alt]*2 + [base] + [alt]*2 + [base] + [alt]*2
+            self.idx = 0
+            self.free_outcome = base
+            return
+        if self.pattern_type == 'follow_last' and self.last_outcome is None and outcome in ('B','P'):
+            self.last_outcome = outcome
+            return
 
         pred = self.next_bet_choice()
         if pred == '':
@@ -185,7 +189,8 @@ class Session:
             'terrific_twos',
             'two_three_two',
             'follow_last',
-            'three_pattern'
+            'three_pattern',
+            'one_two_one'
         ]
         self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
         self.history = []
@@ -217,7 +222,7 @@ if 'session' not in st.session_state:
 session = st.session_state['session']
 
 with st.sidebar:
-    st.title('Bakura 8-Friend MVP')
+    st.title('Bakura 9-Friend MVP')
     session.unit = st.number_input('Unit Size', 1.0, step=0.5, value=session.unit)
     if st.button('New Shoe'):
         session.reset_patterns()
@@ -254,17 +259,17 @@ num = len(values[0])
 cell_colors = [['white'] * num]
 for col in t_df.columns:
     miss = t_df.at['Miss Count', col]
-    col_cols = []
+    col_colors = []
     for metric in t_df.index:
-        col_cols.append('lightgreen' if metric in ('Next Bet','Next Amount') and miss >= 5 else 'white')
-    cell_colors.append(col_cols)
+        col_colors.append('lightgreen' if metric in ('Next Bet','Next Amount') and miss >= 5 else 'white')
+    cell_colors.append(col_colors)
 fig = go.Figure(data=[
     go.Table(
         header=dict(values=header, fill_color='darkblue', font=dict(color='white', size=14), align='center'),
         cells=dict(values=values, fill_color=cell_colors, font=dict(color='black', size=12), align='center', height=30)
     )
 ])
-fig.update_layout(height=550)
+fig.update_layout(height=600)
 st.plotly_chart(fig, use_container_width=True)
 
 # Summary
