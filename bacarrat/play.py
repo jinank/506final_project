@@ -271,4 +271,3 @@ if sess.history:
 # Summary
 st.write("### Session Summary")
 st.write(f"Hands: {len(sess.history)}  Target(+20×unit): {20*sess.unit}  Stop(–60×unit): {60*sess.unit}")
-"""
