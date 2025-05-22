@@ -34,7 +34,7 @@ class FriendPattern:
             self.sequence = None
             self.idx = 0
             self.free_outcome = None
-        elif pattern_type == 'chop'::
+        elif pattern_type == 'chop':
             self.sequence = None
             self.last_outcome = None
         elif pattern_type == 'follow_last':
