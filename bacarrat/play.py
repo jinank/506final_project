@@ -93,28 +93,28 @@ class FriendPattern:
     def record_hand(self, outcome: str, unit: float):
         p = self.pattern_type
         # Initialization on first non-tie for patterned sequences
-        if p == 'terrific_twos' and not hasattr(self, 'free_outcome') and outcome in ('B', 'P'):
+        if p == 'terrific_twos' and self.free_outcome is None and outcome in ('B', 'P'):
             self.free_outcome = outcome
             base, alt = outcome, ('P' if outcome == 'B' else 'B')
             self.sequence = [base, base, alt, alt, base, base, alt, alt, base, base]
             self.idx = 0
             self.history.append('')
             return
-        if p == 'three_pattern' and not hasattr(self, 'free_outcome') and outcome in ('B', 'P'):
+        if p == 'three_pattern' and self.free_outcome is None and outcome in ('B', 'P'):
             self.free_outcome = outcome
             base, alt = outcome, ('P' if outcome == 'B' else 'B')
             self.sequence = [base]*3 + [alt]*3 + [base]*3 + [alt]*2
             self.idx = 0
             self.history.append('')
             return
-        if p == 'one_two_one' and not hasattr(self, 'free_outcome') and outcome in ('B', 'P'):
+        if p == 'one_two_one' and self.free_outcome is None and outcome in ('B', 'P'):
             self.free_outcome = outcome
             base, alt = outcome, ('P' if outcome == 'B' else 'B')
             self.sequence = [base] + [alt]*2 + [base] + [alt]*2 + [base] + [alt]*2
             self.idx = 0
             self.history.append('')
             return
-        if p == 'two_three_two_pattern' and not hasattr(self, 'free_outcome') and outcome in ('B', 'P'):
+        if p == 'two_three_two_pattern' and self.free_outcome is None and outcome in ('B', 'P'):
             self.free_outcome = outcome
             base, alt = outcome, ('P' if outcome == 'B' else 'B')
             # 1-3-2-3-2 pattern
