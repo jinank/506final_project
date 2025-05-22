@@ -28,8 +28,10 @@ class FriendPattern:
             self.sequence = None
         elif pattern_type == 'alternator_start_banker':
             self.sequence = ['B', 'P']
+            self.idx = 0
         elif pattern_type == 'alternator_start_player':
             self.sequence = ['P', 'B']
+            self.idx = 0
         elif pattern_type == 'terrific_twos':
             self.sequence = None
             self.idx = 0
@@ -50,6 +52,7 @@ class FriendPattern:
             self.free_outcome = None
         elif pattern_type == 'two_three_two_pattern':
             self.sequence = None
+            self.idx = 0
             self.free_outcome = None
         else:
             self.sequence = None
