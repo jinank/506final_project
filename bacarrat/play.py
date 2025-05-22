@@ -35,6 +35,11 @@ class FriendPattern:
             self.idx = 0
             self.free_outcome = None
         elif pattern_type == 'two_three_two':
+            # old two-three-two (unused)
+            self.sequence = None
+            self.idx = 0
+            self.free_outcome = None
+        elif pattern_type == 'one_two_one':
             self.sequence = None
             self.idx = 0
             self.free_outcome = None
@@ -46,7 +51,8 @@ class FriendPattern:
             self.sequence = None
             self.idx = 0
             self.free_outcome = None
-        elif pattern_type == 'one_two_one':
+        elif pattern_type == 'two_three_two_pattern':
+            # 2-3-2 alternation
             self.sequence = None
             self.idx = 0
             self.free_outcome = None
@@ -55,32 +61,32 @@ class FriendPattern:
             self.idx = None
 
     def next_bet_choice(self) -> str:
-        # Terrific Twos: free until first non-tie, then 10-step
+        # Terrific Twos
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None:
                 return ''
             return self.sequence[self.idx]
-        # Two-Three-Two: free until first non-tie, then 7-step
-        if self.pattern_type == 'two_three_two':
-            if self.free_outcome is None:
-                return ''
-            return self.sequence[self.idx]
-        # Three Pattern: free until first non-tie, then 11-step
-        if self.pattern_type == 'three_pattern':
-            if self.free_outcome is None:
-                return ''
-            return self.sequence[self.idx]
-        # One-Two-One: free until first non-tie, then 9-step
+        # One-Two-One
         if self.pattern_type == 'one_two_one':
             if self.free_outcome is None:
                 return ''
             return self.sequence[self.idx]
-        # Follow Last: free until first non-tie
+        # Three Pattern
+        if self.pattern_type == 'three_pattern':
+            if self.free_outcome is None:
+                return ''
+            return self.sequence[self.idx]
+        # 232 Pattern
+        if self.pattern_type == 'two_three_two_pattern':
+            if self.free_outcome is None:
+                return ''
+            return self.sequence[self.idx]
+        # Follow Last
         if self.pattern_type == 'follow_last':
             if self.last_outcome is None:
                 return ''
             return self.last_outcome
-        # Alternator patterns
+        # Alternators
         if self.sequence is not None:
             return self.sequence[self.idx]
         # Fixed patterns
@@ -90,22 +96,21 @@ class FriendPattern:
         if self.double_next:
             self.double_next = False
             return self.last_bet_amount * 2
-        # 12-step Star 2.0 multipliers
         multipliers = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
         seq = [unit * m for m in multipliers]
         return seq[min(self.step, len(seq)-1)]
 
     def record_hand(self, outcome: str, unit: float):
-        # Initialize patterns
+        # Initialize pattern sequences on first non-tie
         if self.pattern_type == 'terrific_twos' and self.free_outcome is None and outcome in ('B','P'):
             base, alt = outcome, ('P' if outcome=='B' else 'B')
             self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
             self.idx = 0
             self.free_outcome = base
             return
-        if self.pattern_type == 'two_three_two' and self.free_outcome is None and outcome in ('B','P'):
+        if self.pattern_type == 'one_two_one' and self.free_outcome is None and outcome in ('B','P'):
             base, alt = outcome, ('P' if outcome=='B' else 'B')
-            self.sequence = [base,alt,alt,base,alt,alt,base]
+            self.sequence = [base] + [alt]*2 + [base] + [alt]*2 + [base] + [alt]*2
             self.idx = 0
             self.free_outcome = base
             return
@@ -115,27 +120,27 @@ class FriendPattern:
             self.idx = 0
             self.free_outcome = base
             return
-        if self.pattern_type == 'one_two_one' and self.free_outcome is None and outcome in ('B','P'):
+        if self.pattern_type == 'two_three_two_pattern' and self.free_outcome is None and outcome in ('B','P'):
             base, alt = outcome, ('P' if outcome=='B' else 'B')
-            # 9-step: 1 base,2 alt,1 base,2 alt,1 base,2 alt
-            self.sequence = [base] + [alt]*2 + [base] + [alt]*2 + [base] + [alt]*2
+            # 232: 1 base + 3 alt + 2 base + 3 alt + 2 base
+            self.sequence = [base] + [alt]*3 + [base]*2 + [alt]*3 + [base]*2
             self.idx = 0
             self.free_outcome = base
             return
         if self.pattern_type == 'follow_last' and self.last_outcome is None and outcome in ('B','P'):
             self.last_outcome = outcome
             return
-
+        # Prediction
         pred = self.next_bet_choice()
         if pred == '':
             if self.sequence is not None:
                 self.idx = (self.idx + 1) % len(self.sequence)
             return
-
+        # Bet amount
         self.last_bet_amount = self.next_bet_amount(unit)
         hit = (outcome == pred)
         self.last_hit = hit
-
+        # First bet skip
         if self.first_bet:
             self.first_bet = False
             if hit:
@@ -146,38 +151,38 @@ class FriendPattern:
                 self.win_streak = 0
             if self.sequence is not None:
                 self.idx = (self.idx + 1) % len(self.sequence)
-            if self.pattern_type == 'follow_last' and outcome in ('B','P'):
+            if self.pattern_type=='follow_last' and outcome in ('B','P'):
                 self.last_outcome = outcome
             return
-
+        # Star progression
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            if self.win_streak == 1 and self.last_bet_amount != unit:
-                self.double_next = True
-            if self.win_streak >= 2:
+            if self.win_streak==1 and self.last_bet_amount!=unit:
+                self.double_next=True
+            if self.win_streak>=2:
                 self._reset_progression()
         else:
             self.total_misses += 1
             self.win_streak = 0
             self.miss_count += 1
-            self.step = min(self.miss_count, 11)
-
+            self.step = min(self.miss_count,11)
+        # Advance
         if self.sequence is not None:
             self.idx = (self.idx + 1) % len(self.sequence)
-        if self.pattern_type == 'follow_last' and outcome in ('B','P'):
+        if self.pattern_type=='follow_last' and outcome in ('B','P'):
             self.last_outcome = outcome
 
     def _reset_progression(self):
-        self.miss_count = 0
-        self.step = 0
-        self.win_streak = 0
-        self.double_next = False
+        self.miss_count=0
+        self.step=0
+        self.win_streak=0
+        self.double_next=False
 
 class Session:
     def __init__(self):
-        self.unit = 10.0
-        self.history: List[str] = []
+        self.unit=10.0
+        self.history:List[str]=[]
         self.reset_patterns()
 
     def reset_patterns(self):
@@ -190,100 +195,85 @@ class Session:
             'two_three_two',
             'follow_last',
             'three_pattern',
-            'one_two_one'
+            'one_two_one',
+            'two_three_two_pattern'
         ]
-        self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
-        self.history = []
+        self.friends=[FriendPattern(f'Friend {i+1}',patterns[i]) for i in range(len(patterns))]
+        self.history=[]
 
-    def add_hand(self, outcome: str):
+    def add_hand(self,outcome:str):
         self.history.append(outcome)
-        for friend in self.friends:
-            friend.record_hand(outcome, self.unit)
+        for f in self.friends:
+            f.record_hand(outcome,self.unit)
 
-    def get_state_df(self) -> pd.DataFrame:
-        rows = []
+    def get_state_df(self)->pd.DataFrame:
+        rows=[]
         for f in self.friends:
             rows.append({
-                'Name': f.name,
-                'Pattern': f.pattern_type,
-                'Last Bet': 'Win' if f.last_hit else 'Loss',
-                'Miss Count': f.miss_count,
-                'Next Bet': f.next_bet_choice(),
-                'Next Amount': f.next_bet_amount(self.unit),
-                'Total Hits': f.total_hits,
-                'Total Misses': f.total_misses
+                'Name':f.name,
+                'Pattern':f.pattern_type,
+                'Last Bet':'Win' if f.last_hit else 'Loss',
+                'Miss Count':f.miss_count,
+                'Next Bet':f.next_bet_choice(),
+                'Next Amount':f.next_bet_amount(self.unit),
+                'Total Hits':f.total_hits,
+                'Total Misses':f.total_misses
             })
         return pd.DataFrame(rows)
 
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
-if 'session' not in st.session_state:
-    st.session_state['session'] = Session()
-session = st.session_state['session']
+if 'session' not in st.session_state: st.session_state['session']=Session()
+session=st.session_state['session']
 
 with st.sidebar:
-    st.title('Bakura 9-Friend MVP')
-    session.unit = st.number_input('Unit Size', 1.0, step=0.5, value=session.unit)
-    if st.button('New Shoe'):
-        session.reset_patterns()
+    st.title('Bakura 10-Friend MVP')
+    session.unit=st.number_input('Unit Size',1.0,step=0.5,value=session.unit)
+    if st.button('New Shoe'): session.reset_patterns()
 
-c1, c2, c3 = st.columns(3)
+c1,c2,c3=st.columns(3)
 with c1:
-    if st.button('Record Banker'):
-        session.add_hand('B')
+    if st.button('Record Banker'): session.add_hand('B')
 with c2:
-    if st.button('Record Player'):
-        session.add_hand('P')
+    if st.button('Record Player'): session.add_hand('P')
 with c3:
-    if st.button('Record Tie'):
-        session.add_hand('T')
+    if st.button('Record Tie'): session.add_hand('T')
 
 # Star 2.0 Sequence
-star = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
-df_star = pd.DataFrame(
-    [[session.unit * m for m in star]],
-    index=['Bet Amount'],
-    columns=list(range(1,13))
-)
+star=[1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+df_star=pd.DataFrame([[session.unit*m for m in star]],index=['Bet Amount'],columns=list(range(1,13)))
 st.write('### Star 2.0 Sequence')
-st.dataframe(df_star, use_container_width=True)
+st.dataframe(df_star,use_container_width=True)
 
 # Friend Dashboard
 st.write('### Friend Dashboard')
-df = session.get_state_df()
-t_df = df.set_index('Name').T
-t_df.loc['History'] = [' '.join(session.history)] * len(t_df.columns)
-header = ['Metric'] + list(t_df.columns)
-values = [t_df.index.tolist()] + [t_df[col].tolist() for col in t_df.columns]
-num = len(values[0])
-cell_colors = [['white'] * num]
+df=session.get_state_df()
+t_df=df.set_index('Name').T
+t_df.loc['History']=[' '.join(session.history)]*len(t_df.columns)
+header=['Metric']+list(t_df.columns)
+values=[t_df.index.tolist()]+[t_df[col].tolist() for col in t_df.columns]
+num=len(values[0])
+cell_colors=[['white']*num]
 for col in t_df.columns:
-    miss = t_df.at['Miss Count', col]
-    col_colors = []
-    for metric in t_df.index:
-        col_colors.append('lightgreen' if metric in ('Next Bet','Next Amount') and miss >= 5 else 'white')
-    cell_colors.append(col_colors)
-fig = go.Figure(data=[
-    go.Table(
-        header=dict(values=header, fill_color='darkblue', font=dict(color='white', size=14), align='center'),
-        cells=dict(values=values, fill_color=cell_colors, font=dict(color='black', size=12), align='center', height=30)
-    )
-])
-fig.update_layout(height=600)
-st.plotly_chart(fig, use_container_width=True)
+    miss=t_df.at['Miss Count',col]
+    cols=[]
+    for m in t_df.index:
+        cols.append('lightgreen' if m in ('Next Bet','Next Amount') and miss>=5 else 'white')
+    cell_colors.append(cols)
+fig=go.Figure(data=[go.Table(header=dict(values=header,fill_color='darkblue',font=dict(color='white',size=14),align='center'),cells=dict(values=values,fill_color=cell_colors,font=dict(color='black',size=12),align='center',height=30))])
+fig.update_layout(height=650)
+st.plotly_chart(fig,use_container_width=True)
 
 # Summary
-
-total_needed = df_star.iloc[0].sum()
+total_needed=df_star.iloc[0].sum()
 st.write('### Total Needed for Star Progression')
 st.write(total_needed)
-
-session_total_hits = sum(f.total_hits for f in session.friends)
-session_total_misses = sum(f.total_misses for f in session.friends)
-profit_target_units = 20
-stop_loss_units = 60
-profit_target = session.unit * profit_target_units
-stop_loss = session.unit * stop_loss_units
+session_total_hits=sum(f.total_hits for f in session.friends)
+session_total_misses=sum(f.total_misses for f in session.friends)
+profit_units=20
+stop_units=60
+profit=session.unit*profit_units
+stop=session.unit*stop_units
 st.write('### Session Summary')
 st.write(f"Total Wins: {session_total_hits}, Total Losses: {session_total_misses}")
-st.write(f"Profit Target: {profit_target_units} units ({profit_target}), Stop Loss: {stop_loss_units} units ({stop_loss})")
+st.write(f"Profit Target: {profit_units} units ({profit}), Stop Loss: {stop_units} units ({stop})")
