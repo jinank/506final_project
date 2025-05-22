@@ -23,39 +23,39 @@ class FriendPattern:
         self.last_bet_amount = 0
         # Skip miss on first bet
         self.first_bet = True
-        # Sequence patterns
+        # Pattern-specific state
         if pattern_type == 'alternator_start_banker':
             self.sequence = ['B', 'P']
-            self.idx = 0
+            self.seq_index = 0
         elif pattern_type == 'alternator_start_player':
             self.sequence = ['P', 'B']
-            self.idx = 0
+            self.seq_index = 0
         elif pattern_type == 'terrific_twos':
             self.sequence = None
-            self.idx = 0
+            self.seq_index = 0
             self.free_outcome = None
         elif pattern_type == 'follow_last':
             self.sequence = None
-            self.idx = None
+            self.seq_index = None
             self.last_outcome = None
         else:
             self.sequence = None
-            self.idx = None
+            self.seq_index = None
 
     def next_bet_choice(self) -> str:
-        # Terrific Twos: free until first non-tie, then pattern
+        # Terrific Twos: free until first non-tie
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None:
                 return ''
-            return self.sequence[self.idx]
-        # Follow Last: free until first non-tie, then repeat last outcome
+            return self.sequence[self.seq_index]
+        # Follow Last: free until first non-tie
         if self.pattern_type == 'follow_last':
             if self.last_outcome is None:
                 return ''
             return self.last_outcome
-        # Alternator sequences
+        # Alternator patterns
         if self.sequence is not None:
-            return self.sequence[self.idx]
+            return self.sequence[self.seq_index]
         # Fixed patterns
         return 'B' if self.pattern_type == 'banker_only' else 'P'
 
@@ -63,23 +63,22 @@ class FriendPattern:
         if self.double_next:
             self.double_next = False
             return self.last_bet_amount * 2
-        # 12-step Star 2.0 multipliers
+        # Star 2.0 multipliers
         multipliers = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
         seq = [unit * m for m in multipliers]
         return seq[min(self.step, len(seq)-1)]
 
     def record_hand(self, outcome: str, unit: float):
-        # Terrific Twos init
+        # Initialize Terrific Twos sequence
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None and outcome in ('B','P'):
                 base = outcome
                 alt = 'P' if base=='B' else 'B'
-                # 10-step pattern
-                self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
-                self.idx = 0
+                self.sequence = [base, base, alt, alt, base, base, alt, alt, base, base]
+                self.seq_index = 0
                 self.free_outcome = base
                 return
-        # Follow Last init
+        # Initialize Follow Last
         if self.pattern_type == 'follow_last':
             if self.last_outcome is None and outcome in ('B','P'):
                 self.last_outcome = outcome
@@ -87,15 +86,15 @@ class FriendPattern:
         # Determine prediction
         pred = self.next_bet_choice()
         if pred == '':
-            # free hand, advance sequence if any
+            # free hand: advance sequence if exists
             if self.sequence is not None:
-                self.idx = (self.idx + 1) % len(self.sequence)
+                self.seq_index = (self.seq_index + 1) % len(self.sequence)
             return
         # Capture bet amount
         self.last_bet_amount = self.next_bet_amount(unit)
         hit = (outcome == pred)
         self.last_hit = hit
-        # Skip miss_count on first real bet
+        # Skip miss counting on first bet
         if self.first_bet:
             self.first_bet = False
             if hit:
@@ -104,10 +103,9 @@ class FriendPattern:
             else:
                 self.total_misses += 1
                 self.win_streak = 0
-            # Advance sequence pointers
             if self.sequence is not None:
-                self.idx = (self.idx + 1) % len(self.sequence)
-            if self.pattern_type=='follow_last' and outcome in ('B','P'):
+                self.seq_index = (self.seq_index + 1) % len(self.sequence)
+            if self.pattern_type == 'follow_last' and outcome in ('B','P'):
                 self.last_outcome = outcome
             return
         # Star 2.0 progression
@@ -123,10 +121,10 @@ class FriendPattern:
             self.win_streak = 0
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
-        # Advance patterns
+        # Advance any sequences
         if self.sequence is not None:
-            self.idx = (self.idx + 1) % len(self.sequence)
-        if self.pattern_type=='follow_last' and outcome in ('B','P'):
+            self.seq_index = (self.seq_index + 1) % len(self.sequence)
+        if self.pattern_type == 'follow_last' and outcome in ('B','P'):
             self.last_outcome = outcome
 
     def _reset_progression(self):
@@ -198,7 +196,11 @@ with c3:
 
 # Star 2.0 Sequence
 star = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
-df_star = pd.DataFrame([[session.unit*m for m in star]], index=['Bet Amount'], columns=list(range(1,13)))
+df_star = pd.DataFrame(
+    [[session.unit * m for m in star]],
+    index=['Bet Amount'],
+    columns=list(range(1,13))
+)
 st.write('### Star 2.0 Sequence')
 st.dataframe(df_star, use_container_width=True)
 
@@ -213,10 +215,10 @@ num = len(values[0])
 cell_colors = [['white'] * num]
 for col in t_df.columns:
     miss = t_df.at['Miss Count', col]
-    col_cols = []
-    for m in t_df.index:
-        col_cols.append('lightgreen' if m in ('Next Bet','Next Amount') and miss >= 5 else 'white')
-    cell_colors.append(col_cols)
+    col_colors = []
+    for metric in t_df.index:
+        col_colors.append('lightgreen' if metric in ('Next Bet','Next Amount') and miss >= 5 else 'white')
+    cell_colors.append(col_colors)
 fig = go.Figure(data=[
     go.Table(
         header=dict(values=header, fill_color='darkblue', font=dict(color='white', size=14), align='center'),
@@ -224,7 +226,6 @@ fig = go.Figure(data=[
     )
 ])
 fig.update_layout(height=550)
-
 st.plotly_chart(fig, use_container_width=True)
 
 # Summary
