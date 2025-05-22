@@ -23,21 +23,20 @@ class FriendPattern:
         self.last_bet_amount = 0
         # Skip miss on first bet
         self.first_bet = True
-        # History
+        # Per-friend history for detailed grid
         self.history: List[str] = []
         # Pattern-specific state
         if pattern_type == 'alternator_start_banker':
-            self.sequence = ['B','P']
+            self.sequence = ['B', 'P']
             self.idx = 0
         elif pattern_type == 'alternator_start_player':
-            self.sequence = ['P','B']
+            self.sequence = ['P', 'B']
             self.idx = 0
         elif pattern_type == 'terrific_twos':
             self.sequence = None
             self.idx = 0
             self.free_outcome = None
         elif pattern_type == 'chop':
-            # Chop: opposite of last non-tie
             self.sequence = None
             self.idx = None
             self.last_outcome = None
@@ -63,31 +62,30 @@ class FriendPattern:
             self.idx = None
 
     def next_bet_choice(self) -> str:
-        # Chop: free until first non-tie, then opposite
-        if self.pattern_type == 'chop':
-            if self.last_outcome is None:
-                return ''
-            return 'B' if self.last_outcome=='P' else 'P'
+        p = self.pattern_type
+        # Chop: opposite of last outcome
+        if p == 'chop':
+            return '' if self.last_outcome is None else ('B' if self.last_outcome=='P' else 'P')
         # Terrific Twos
-        if self.pattern_type == 'terrific_twos' and self.free_outcome is not None:
+        if p == 'terrific_twos' and self.free_outcome is not None:
             return self.sequence[self.idx]
         # Three Pattern
-        if self.pattern_type == 'three_pattern' and self.free_outcome is not None:
+        if p == 'three_pattern' and self.free_outcome is not None:
             return self.sequence[self.idx]
         # One-Two-One
-        if self.pattern_type == 'one_two_one' and self.free_outcome is not None:
+        if p == 'one_two_one' and self.free_outcome is not None:
             return self.sequence[self.idx]
-        # 232 Pattern
-        if self.pattern_type == 'two_three_two_pattern' and self.free_outcome is not None:
+        # 2-3-2 Pattern
+        if p == 'two_three_two_pattern' and self.free_outcome is not None:
             return self.sequence[self.idx]
         # Follow Last
-        if self.pattern_type == 'follow_last' and self.last_outcome is not None:
+        if p == 'follow_last' and self.last_outcome is not None:
             return self.last_outcome
         # Alternators
         if self.sequence is not None:
             return self.sequence[self.idx]
         # Fixed
-        return 'B' if self.pattern_type=='banker_only' else 'P'
+        return 'B' if p=='banker_only' else 'P'
 
     def next_bet_amount(self, unit: float) -> float:
         if self.double_next:
@@ -95,50 +93,42 @@ class FriendPattern:
             return self.last_bet_amount * 2
         mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
         seq = [unit*m for m in mults]
-        return seq[min(self.step,len(seq)-1)]
+        return seq[min(self.step, len(seq)-1)]
 
     def record_hand(self, outcome: str, unit: float):
-        # Initialize Terrific Twos
-        if self.pattern_type=='terrific_twos' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt=outcome,('P' if outcome=='B' else 'B')
+        p = self.pattern_type
+        # Initialize sequences on first non-tie
+        if p=='terrific_twos' and self.free_outcome is None and outcome in ('B','P'):
+            base,alt = outcome, ('P' if outcome=='B' else 'B')
             self.sequence=[base,base,alt,alt,base,base,alt,alt,base,base]
-            self.idx=0; self.free_outcome=base
-            self.history.append('')
-            return
-        # Initialize Chop
-        if self.pattern_type=='chop' and self.last_outcome is None and outcome in ('B','P'):
-            self.last_outcome=outcome; self.history.append(''); return
-        # Initialize Follow Last
-        if self.pattern_type=='follow_last' and self.last_outcome is None and outcome in ('B','P'):
-            self.last_outcome=outcome; self.history.append(''); return
-        # Initialize Three Pattern
-        if self.pattern_type=='three_pattern' and self.free_outcome is None and outcome in ('B','P'):
+            self.idx=0; self.free_outcome=base; self.history.append(''); return
+        if p=='three_pattern' and self.free_outcome is None and outcome in ('B','P'):
             base,alt=outcome,('P' if outcome=='B' else 'B')
             self.sequence=[base]*3+[alt]*3+[base]*3+[alt]*2
-            self.idx=0; self.free_outcome=base
-            self.history.append(''); return
-        # Initialize One-Two-One
-        if self.pattern_type=='one_two_one' and self.free_outcome is None and outcome in ('B','P'):
+            self.idx=0; self.free_outcome=base; self.history.append(''); return
+        if p=='one_two_one' and self.free_outcome is None and outcome in ('B','P'):
             base,alt=outcome,('P' if outcome=='B' else 'B')
             self.sequence=[base]+[alt]*2+[base]+[alt]*2+[base]+[alt]*2
-            self.idx=0; self.free_outcome=base
-            self.history.append(''); return
-        # Initialize 2-3-2 Pattern
-        if self.pattern_type=='two_three_two_pattern' and self.free_outcome is None and outcome in ('B','P'):
+            self.idx=0; self.free_outcome=base; self.history.append(''); return
+        if p=='two_three_two_pattern' and self.free_outcome is None and outcome in ('B','P'):
             base,alt=outcome,('P' if outcome=='B' else 'B')
             self.sequence=[base]+[alt]*3+[base]*2+[alt]*3+[base]*2
-            self.idx=0; self.free_outcome=base
-            self.history.append(''); return
+            self.idx=0; self.free_outcome=base; self.history.append(''); return
+        if p=='chop' and self.last_outcome is None and outcome in ('B','P'):
+            self.last_outcome=outcome; self.history.append(''); return
+        if p=='follow_last' and self.last_outcome is None and outcome in ('B','P'):
+            self.last_outcome=outcome; self.history.append(''); return
 
-        pred=self.next_bet_choice()
+        pred = self.next_bet_choice()
         if pred=='':
+            # free-hand
             if self.sequence is not None: self.idx=(self.idx+1)%len(self.sequence)
             self.history.append(''); return
 
-        amount=self.next_bet_amount(unit)
-        hit=(outcome==pred)
-        self.last_hit=hit
-        # First real bet: skip miss
+        amt = self.next_bet_amount(unit)
+        hit = (outcome==pred)
+        self.last_hit = hit
+        # first real bet: skip miss count
         if self.first_bet:
             self.first_bet=False
             status='W' if hit else 'M'
@@ -146,22 +136,19 @@ class FriendPattern:
             if hit: self.total_hits+=1
             else: self.total_misses+=1
             if self.sequence is not None: self.idx=(self.idx+1)%len(self.sequence)
-            if self.pattern_type=='chop': self.last_outcome=outcome
-            if self.pattern_type=='follow_last': self.last_outcome=outcome
+            if p in ('chop','follow_last'): self.last_outcome=outcome
             return
         # Star progression
         status='W' if hit else 'M'
         self.history.append(status)
         if hit:
             self.total_hits+=1; self.win_streak+=1
-            if self.win_streak==1 and amount!=unit: self.double_next=True
+            if self.win_streak==1 and amt!=unit: self.double_next=True
             if self.win_streak>=2: self._reset_progression()
         else:
             self.total_misses+=1; self.win_streak=0; self.miss_count+=1; self.step=min(self.miss_count,11)
-        # Advance sequences
         if self.sequence is not None: self.idx=(self.idx+1)%len(self.sequence)
-        if self.pattern_type=='chop': self.last_outcome=outcome
-        if self.pattern_type=='follow_last': self.last_outcome=outcome
+        if p in ('chop','follow_last'): self.last_outcome=outcome
 
     def _reset_progression(self):
         self.miss_count=0; self.step=0; self.win_streak=0; self.double_next=False
@@ -169,15 +156,23 @@ class FriendPattern:
 class Session:
     def __init__(self):
         self.unit=10.0; self.history=[]; self.reset_patterns()
+
     def reset_patterns(self):
         patterns=[
-            'banker_only','player_only','alternator_start_banker','alternator_start_player',
-            'terrific_twos','chop','follow_last','three_pattern','one_two_one','two_three_two_pattern'
+            'banker_only','player_only',
+            'alternator_start_banker','alternator_start_player',
+            'terrific_twos','chop','follow_last',
+            'three_pattern','one_two_one','two_three_two_pattern'
         ]
         self.friends=[FriendPattern(f'Friend {i+1}',patterns[i]) for i in range(len(patterns))]
         self.history=[]
-    def add_hand(self,o): self.history.append(o); [f.record_hand(o,self.unit) for f in self.friends]
-    def get_state_df(self): return pd.DataFrame([{
+
+    def add_hand(self,o:str):
+        self.history.append(o)
+        for f in self.friends: f.record_hand(o,self.unit)
+
+    def get_state_df(self):
+        return pd.DataFrame([{
             'Name':f.name,'Pattern':f.pattern_type,'Last Bet':'Win' if f.last_hit else 'Loss',
             'Miss Count':f.miss_count,'Next Bet':f.next_bet_choice(),
             'Next Amount':f.next_bet_amount(self.unit),'Total Hits':f.total_hits,'Total Misses':f.total_misses
@@ -191,11 +186,53 @@ with st.sidebar:
     st.title('Bakura 10-Friend MVP')
     session.unit=st.number_input('Unit Size',1.0,step=0.5,value=session.unit)
     if st.button('New Shoe'): session.reset_patterns()
-# Input Buttons
+
+# Hand Buttons
 c1,c2,c3=st.columns(3)
 with c1: st.button('Record Banker') and session.add_hand('B')
 with c2: st.button('Record Player') and session.add_hand('P')
 with c3: st.button('Record Tie') and session.add_hand('T')
-# Display Sequence/Table/History/Summary omitted for brevity
 
-# ... rest of UI remains the same ...
+# Star Progression Sequence
+df_star=pd.DataFrame([[session.unit*m for m in [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]]],
+                     index=['Bet Amount'],columns=list(range(1,13)))
+st.write('### Star 2.0 Sequence')
+st.dataframe(df_star,use_container_width=True)
+
+# Friend Dashboard
+df=session.get_state_df()
+t_df=df.set_index('Name').T
+t_df.loc['History']=[' '.join(session.history)]*len(t_df.columns)
+header=['Metric']+list(t_df.columns)
+values=[t_df.index.tolist()]+[t_df[c].tolist() for c in t_df.columns]
+num=len(values[0])
+cell_colors=[['white']*num]
+for col in t_df.columns:
+    miss=t_df.at['Miss Count',col]
+    col_cols=[]
+    for m in t_df.index:
+        col_cols.append('lightgreen' if m in ('Next Bet','Next Amount') and miss>=5 else 'white')
+    cell_colors.append(col_cols)
+fig=go.Figure(data=[go.Table(header=dict(values=header,fill_color='darkblue',font=dict(color='white'),align='center'),
+                              cells=dict(values=values,fill_color=cell_colors,align='center'))])
+st.plotly_chart(fig,use_container_width=True)
+
+# Detailed History
+dh=pd.DataFrame({f.name:f.history for f in session.friends},
+                index=[f'Hand {i+1}' for i in range(len(session.history))]).T
+colormap={'W':'lightgreen','M':'lightcoral','':'lightgrey'}
+colors=[[colormap[val] for val in row] for row in dh.values]
+hdr=['Friend']+list(dh.columns)
+vals=[dh.index.tolist()]+[dh.loc[name].tolist() for name in dh.index]
+hist_fig=go.Figure(data=[go.Table(header=dict(values=hdr,fill_color='darkblue',font=dict(color='white'),align='center'),
+                                  cells=dict(values=vals,fill_color=[['white']*dh.shape[1]]+colors,align='center'))])
+st.plotly_chart(hist_fig,use_container_width=True)
+
+# Summary
+st.write('### Total Needed for Star Progression')
+st.write(df_star.iloc[0].sum())
+Wins=sum(f.total_hits for f in session.friends)
+Losses=sum(f.total_misses for f in session.friends)
+st.write(f"Total Wins: {Wins}, Total Losses: {Losses}")
+profit=200; stop=600
+st.write(f"Profit Target: {profit}, Stop Loss: {stop}")
