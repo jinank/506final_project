@@ -5,13 +5,13 @@ import pandas as pd
 import plotly.graph_objects as go
 from typing import List
 
-# --- Model for a single friend/pattern ---
+# --- Friend/pattern model ---
 class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
         self.pattern_type = pattern_type
 
-        # Star‐2.0 progression state
+        # Star 2.0 state
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
@@ -21,175 +21,117 @@ class FriendPattern:
         self.total_hits = 0
         self.total_misses = 0
 
-        # Double‐on‐first‐win
+        # Double-on-first-win
         self.double_next = False
-        self.last_bet_amount = 0
+        self.last_bet_amount = 0.0
 
-        # Skip counting the very first real bet as a miss
+        # Skip first-bet miss
         self.first_bet = True
 
-        # Sequence state for pattern‐based bettors:
-        # Alternators, Two‐pattern, Three‐pattern, One‐two‐one, 2‐3‐2, Chop, Follow‐last
+        # Sequence logic
         self.free_outcome = None
         self.sequence = None
         self.idx = 0
         self.last_outcome = None
 
-        # Define the sequence template based on pattern_type:
-        if pattern_type == 'banker_only':
-            pass  # no sequence
-        elif pattern_type == 'player_only':
-            pass
-        elif pattern_type == 'alternator_start_banker':
+        p = pattern_type
+        if p == 'alternator_start_banker':
             self.sequence = ['B','P']
-        elif pattern_type == 'alternator_start_player':
+        elif p == 'alternator_start_player':
             self.sequence = ['P','B']
-        elif pattern_type == 'terrific_twos':
-            # will build after first free hand
-            pass
-        elif pattern_type == 'chop':
-            # will wait for free hand then always opposite
-            pass
-        elif pattern_type == 'three_pattern':
-            pass
-        elif pattern_type == 'one_two_one':
-            pass
-        elif pattern_type == 'two_three_two':
-            pass
-        elif pattern_type == 'follow_last':
-            pass
-        else:
-            raise ValueError("Unknown pattern")
+        # terrific_twos, three_pattern, one_two_one, two_three_two, chop, follow_last
+        # all initialized on first non-tie in record_hand()
 
     def next_bet_choice(self) -> str:
-        """Return 'B','P', or '' for free hand."""
         p = self.pattern_type
 
-        # 1) Terrific Twos: free until first non-tie
-        if p == 'terrific_twos':
+        # Patterns that wait for a free hand first:
+        if p in ('terrific_twos','three_pattern','one_two_one','two_three_two'):
             if self.free_outcome is None:
-                return ''
+                return ''  # free hand
             return self.sequence[self.idx]
 
-        # 2) Chop: free until first non-tie, then always opposite of last_outcome
         if p == 'chop':
             if self.free_outcome is None:
                 return ''
-            return 'P' if self.free_outcome == 'B' else 'B'
+            # always opposite of last non-tie
+            return 'P' if self.free_outcome=='B' else 'B'
 
-        # 3) Three‐pattern: free until first non-tie
-        if p == 'three_pattern':
-            if self.free_outcome is None:
-                return ''
-            return self.sequence[self.idx]
-
-        # 4) One‐Two‐One
-        if p == 'one_two_one':
-            if self.free_outcome is None:
-                return ''
-            return self.sequence[self.idx]
-
-        # 5) Two‐Three‐Two
-        if p == 'two_three_two':
-            if self.free_outcome is None:
-                return ''
-            return self.sequence[self.idx]
-
-        # 6) Follow‐last: free until first non-tie, then repeat last_outcome
         if p == 'follow_last':
             if self.last_outcome is None:
                 return ''
             return self.last_outcome
 
-        # 7) Alternators & fixed
+        # Alternators & fixed bets:
         if self.sequence:
             return self.sequence[self.idx]
         return 'B' if p=='banker_only' else 'P'
 
     def next_bet_amount(self, unit: float) -> float:
-        """Compute Star 2.0 bet amount, doubling if flagged."""
-        # Double‐on‐first‐win logic:
         if self.double_next:
             self.double_next = False
             return self.last_bet_amount * 2
 
-        # Standard 12‐step Star2.0 multipliers:
         mult = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
         idx = max(0, min(self.step, len(mult)-1))
         return unit * mult[idx]
 
     def record_hand(self, outcome: str, unit: float):
-        """Update all state given a new hand outcome."""
         p = self.pattern_type
 
-        # Terrific Twos init
+        # Initialize sequences on first non-tie:
         if p=='terrific_twos' and self.free_outcome is None and outcome in ('B','P'):
             base = outcome
-            alt  = 'P' if base=='B' else 'B'
-            # 10‐step: BBPPBBPPBB or PPBBPPBBPP
-            self.sequence = [
-                base,base,alt,alt,base,base,alt,alt,base,base
-            ]
+            alt = 'P' if base=='B' else 'B'
+            self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
             self.free_outcome = base
             self.idx = 0
             return
 
-        # Three‐pattern init (11 steps)
         if p=='three_pattern' and self.free_outcome is None and outcome in ('B','P'):
             base = outcome
-            alt  = 'P' if base=='B' else 'B'
-            # 11‐step: BBPPPB B B PPP
-            self.sequence = (
-                [base]*2 + [alt]*3 + [base]*3 + [alt]*3
-            )
+            alt = 'P' if base=='B' else 'B'
+            self.sequence = [base]*2 + [alt]*3 + [base]*3 + [alt]*3
             self.free_outcome = base
             self.idx = 0
             return
 
-        # One‐Two‐One init (9 steps)
         if p=='one_two_one' and self.free_outcome is None and outcome in ('B','P'):
             base = outcome
-            alt  = 'P' if base=='B' else 'B'
+            alt = 'P' if base=='B' else 'B'
             self.sequence = [alt,alt,base] * 3
             self.free_outcome = base
             self.idx = 0
             return
 
-        # Two‐Three‐Two init (10 steps)
         if p=='two_three_two' and self.free_outcome is None and outcome in ('B','P'):
             base = outcome
-            alt  = 'P' if base=='B' else 'B'
-            self.sequence = (
-                [base] + [alt]*3 + [base]*2 + [alt]*3 + [base]*2
-            )
+            alt = 'P' if base=='B' else 'B'
+            self.sequence = [base] + [alt]*3 + [base]*2 + [alt]*3 + [base]*2
             self.free_outcome = base
             self.idx = 0
             return
 
-        # Chop init
         if p=='chop' and self.free_outcome is None and outcome in ('B','P'):
             self.free_outcome = outcome
             return
 
-        # Follow‐last init
         if p=='follow_last' and self.last_outcome is None and outcome in ('B','P'):
             self.last_outcome = outcome
             return
 
-        # Determine prediction
         pred = self.next_bet_choice()
         if pred == '':
-            # free hand: just advance sequence idx if any
             if self.sequence:
                 self.idx = (self.idx+1) % len(self.sequence)
             return
 
-        # Remember last bet amount for doubling logic
+        # Capture last bet amt
         self.last_bet_amount = self.next_bet_amount(unit)
-        hit = (outcome == pred)
+        hit = (outcome==pred)
         self.last_hit = hit
 
-        # First‐bet: count hit but skip miss_count/progression
+        # First real bet: record hit but skip miss_count/progression
         if self.first_bet:
             self.first_bet = False
             if hit:
@@ -198,22 +140,19 @@ class FriendPattern:
             else:
                 self.total_misses += 1
                 self.win_streak = 0
-            # advance any sequence
             if self.sequence:
                 self.idx = (self.idx+1) % len(self.sequence)
             if p=='follow_last' and outcome in ('B','P'):
                 self.last_outcome = outcome
             return
 
-        # Star2.0 progression logic:
+        # Star 2.0 progression
         if hit:
             self.total_hits += 1
             self.win_streak += 1
-            # double on first win if not base-unit
-            if self.win_streak == 1 and self.last_bet_amount != unit:
+            if self.win_streak==1 and self.last_bet_amount!=unit:
                 self.double_next = True
-            # reset progression only after TWO straight wins
-            if self.win_streak >= 2:
+            if self.win_streak>=2:
                 self.miss_count = 0
                 self.step = 0
                 self.win_streak = 0
@@ -224,14 +163,14 @@ class FriendPattern:
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
 
-        # Advance alternator/sequences
+        # Advance sequence or last_outcome
         if self.sequence:
             self.idx = (self.idx+1) % len(self.sequence)
         if p=='follow_last' and outcome in ('B','P'):
             self.last_outcome = outcome
 
 
-# --- Session to hold all friends + history ---
+# --- Session holds all friends + history ---
 class Session:
     def __init__(self):
         self.unit = 10.0
@@ -246,10 +185,8 @@ class Session:
             'three_pattern','one_two_one',
             'two_three_two','follow_last'
         ]
-        self.friends = [
-            FriendPattern(f'Friend {i+1}', types[i])
-            for i in range(10)
-        ]
+        self.friends = [FriendPattern(f'Friend {i+1}', types[i])
+                        for i in range(10)]
         self.history = []
 
     def add_hand(self, outcome: str):
@@ -273,7 +210,7 @@ class Session:
         return pd.DataFrame(rows)
 
 
-# --- Streamlit UI ---
+# --- Streamlit App ---
 st.set_page_config(layout='wide')
 if 'session' not in st.session_state:
     st.session_state['session'] = Session()
@@ -282,7 +219,7 @@ sess = st.session_state['session']
 # Sidebar
 with st.sidebar:
     st.title("Bakura 10-Friend MVP")
-    sess.unit = st.number_input("Unit Size", min_value=1.0, step=0.5, value=sess.unit)
+    sess.unit = st.number_input("Unit Size", 1.0, step=0.5, value=sess.unit)
     if st.button("New Shoe"):
         sess.reset()
 
@@ -298,7 +235,7 @@ with c3:
     if st.button("Record Tie"):
         sess.add_hand('T')
 
-# Star 2.0 Sequence Display
+# Star 2.0 Sequence
 star_mult = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
 star_df = pd.DataFrame([[sess.unit*m for m in star_mult]],
                        index=['Bet Amt'],
@@ -338,6 +275,6 @@ st.plotly_chart(fig, use_container_width=True)
 
 # Summary
 st.write("### Summary")
-st.write(f"Total hands: {len(sess.history)},  "
-         f"Profit target (×unit): 20 → {20*sess.unit},  "
-         f"Stop loss (×unit): 60 → {60*sess.unit}")
+st.write(f"Hands: {len(sess.history)}  "
+         f"Target (+20×unit): {20*sess.unit}  "
+         f"Stop (–60×unit): {60*sess.unit}")
