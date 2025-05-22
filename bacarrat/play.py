@@ -137,15 +137,15 @@ class FriendPattern:
 
         # Star progression
         self.history.append('W' if hit else 'M')
-            if hit:
-        self.win_streak += 1
-        # Only reset progression for pure Star‐2.0 players,
-        # i.e. banker_only or player_only patterns:
-        if self.win_streak == 2 and self.pattern_type in ('banker_only','player_only'):
-            self.miss_count = 0
-            self.step = 0
-            self.win_streak = 0
-            self.double_next = False
+        if hit:
+            self.win_streak += 1
+            # Only reset progression for pure Star‐2.0 players,
+            # i.e. banker_only or player_only patterns:
+            if self.win_streak == 2 and self.pattern_type in ('banker_only','player_only'):
+                self.miss_count = 0
+                self.step = 0
+                self.win_streak = 0
+                self.double_next = False
         else:
             self.total_misses += 1
             self.win_streak = 0
