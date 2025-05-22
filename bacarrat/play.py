@@ -18,7 +18,7 @@ class FriendPattern:
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
-        # Double-on-first-win
+        # Double-on-first-win flag
         self.double_next = False
         self.last_bet_amount = 0
         # Skip miss on first bet
@@ -26,28 +26,46 @@ class FriendPattern:
         # Pattern-specific state
         if pattern_type == 'alternator_start_banker':
             self.sequence = ['B', 'P']
-            self.seq_index = 0
+            self.idx = 0
         elif pattern_type == 'alternator_start_player':
             self.sequence = ['P', 'B']
-            self.seq_index = 0
+            self.idx = 0
         elif pattern_type == 'terrific_twos':
             self.sequence = None
-            self.seq_index = 0
+            self.idx = 0
+            self.free_outcome = None
+        elif pattern_type == 'two_three_two':
+            self.sequence = None
+            self.idx = 0
             self.free_outcome = None
         elif pattern_type == 'follow_last':
             self.sequence = None
-            self.seq_index = None
+            self.idx = None
             self.last_outcome = None
+        elif pattern_type == 'three_pattern':
+            self.sequence = None
+            self.idx = 0
+            self.free_outcome = None
         else:
             self.sequence = None
-            self.seq_index = None
+            self.idx = None
 
     def next_bet_choice(self) -> str:
-        # Terrific Twos: free until first non-tie
+        # Terrific Twos: free until first non-tie, then 10-step pattern
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None:
                 return ''
-            return self.sequence[self.seq_index]
+            return self.sequence[self.idx]
+        # Two-Three-Two: free until first non-tie, then 8-step pattern
+        if self.pattern_type == 'two_three_two':
+            if self.free_outcome is None:
+                return ''
+            return self.sequence[self.idx]
+        # Three Pattern: free until first non-tie, then 11-step pattern
+        if self.pattern_type == 'three_pattern':
+            if self.free_outcome is None:
+                return ''
+            return self.sequence[self.idx]
         # Follow Last: free until first non-tie
         if self.pattern_type == 'follow_last':
             if self.last_outcome is None:
@@ -55,7 +73,7 @@ class FriendPattern:
             return self.last_outcome
         # Alternator patterns
         if self.sequence is not None:
-            return self.sequence[self.seq_index]
+            return self.sequence[self.idx]
         # Fixed patterns
         return 'B' if self.pattern_type == 'banker_only' else 'P'
 
@@ -69,13 +87,33 @@ class FriendPattern:
         return seq[min(self.step, len(seq)-1)]
 
     def record_hand(self, outcome: str, unit: float):
-        # Initialize Terrific Twos sequence
+        # Initialize Terrific Twos
         if self.pattern_type == 'terrific_twos':
             if self.free_outcome is None and outcome in ('B','P'):
                 base = outcome
                 alt = 'P' if base=='B' else 'B'
                 self.sequence = [base, base, alt, alt, base, base, alt, alt, base, base]
-                self.seq_index = 0
+                self.idx = 0
+                self.free_outcome = base
+                return
+        # Initialize Two-Three-Two
+        if self.pattern_type == 'two_three_two':
+            if self.free_outcome is None and outcome in ('B','P'):
+                base = outcome
+                alt = 'P' if base=='B' else 'B'
+                # pattern: base, alt, alt, base, alt, alt, base
+                self.sequence = [base, alt, alt, base, alt, alt, base]
+                self.idx = 0
+                self.free_outcome = base
+                return
+        # Initialize Three Pattern
+        if self.pattern_type == 'three_pattern':
+            if self.free_outcome is None and outcome in ('B','P'):
+                base = outcome
+                alt = 'P' if base=='B' else 'B'
+                # 11-step: base x3, alt x3, base x3, alt x2
+                self.sequence = [base, base, base, alt, alt, alt, base, base, base, alt, alt]
+                self.idx = 0
                 self.free_outcome = base
                 return
         # Initialize Follow Last
@@ -83,18 +121,17 @@ class FriendPattern:
             if self.last_outcome is None and outcome in ('B','P'):
                 self.last_outcome = outcome
                 return
-        # Determine prediction
+
         pred = self.next_bet_choice()
         if pred == '':
-            # free hand: advance sequence if exists
             if self.sequence is not None:
-                self.seq_index = (self.seq_index + 1) % len(self.sequence)
+                self.idx = (self.idx + 1) % len(self.sequence)
             return
-        # Capture bet amount
+
         self.last_bet_amount = self.next_bet_amount(unit)
         hit = (outcome == pred)
         self.last_hit = hit
-        # Skip miss counting on first bet
+
         if self.first_bet:
             self.first_bet = False
             if hit:
@@ -104,11 +141,11 @@ class FriendPattern:
                 self.total_misses += 1
                 self.win_streak = 0
             if self.sequence is not None:
-                self.seq_index = (self.seq_index + 1) % len(self.sequence)
+                self.idx = (self.idx + 1) % len(self.sequence)
             if self.pattern_type == 'follow_last' and outcome in ('B','P'):
                 self.last_outcome = outcome
             return
-        # Star 2.0 progression
+
         if hit:
             self.total_hits += 1
             self.win_streak += 1
@@ -121,9 +158,9 @@ class FriendPattern:
             self.win_streak = 0
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
-        # Advance any sequences
+
         if self.sequence is not None:
-            self.seq_index = (self.seq_index + 1) % len(self.sequence)
+            self.idx = (self.idx + 1) % len(self.sequence)
         if self.pattern_type == 'follow_last' and outcome in ('B','P'):
             self.last_outcome = outcome
 
@@ -147,7 +184,8 @@ class Session:
             'alternator_start_player',
             'terrific_twos',
             'two_three_two',
-            'follow_last'
+            'follow_last',
+            'three_pattern'
         ]
         self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
         self.history = []
@@ -179,7 +217,7 @@ if 'session' not in st.session_state:
 session = st.session_state['session']
 
 with st.sidebar:
-    st.title('Bakura 6-Friend MVP')
+    st.title('Bakura 8-Friend MVP')
     session.unit = st.number_input('Unit Size', 1.0, step=0.5, value=session.unit)
     if st.button('New Shoe'):
         session.reset_patterns()
@@ -216,10 +254,10 @@ num = len(values[0])
 cell_colors = [['white'] * num]
 for col in t_df.columns:
     miss = t_df.at['Miss Count', col]
-    col_colors = []
+    col_cols = []
     for metric in t_df.index:
-        col_colors.append('lightgreen' if metric in ('Next Bet','Next Amount') and miss >= 5 else 'white')
-    cell_colors.append(col_colors)
+        col_cols.append('lightgreen' if metric in ('Next Bet','Next Amount') and miss >= 5 else 'white')
+    cell_colors.append(col_cols)
 fig = go.Figure(data=[
     go.Table(
         header=dict(values=header, fill_color='darkblue', font=dict(color='white', size=14), align='center'),
@@ -230,14 +268,13 @@ fig.update_layout(height=550)
 st.plotly_chart(fig, use_container_width=True)
 
 # Summary
+
 total_needed = df_star.iloc[0].sum()
 st.write('### Total Needed for Star Progression')
 st.write(total_needed)
 
-# Session Totals and Targets
 session_total_hits = sum(f.total_hits for f in session.friends)
 session_total_misses = sum(f.total_misses for f in session.friends)
-# Dynamic profit target and stop loss based on unit size (for unit=10: 20*10=200, 60*10=600)
 profit_target_units = 20
 stop_loss_units = 60
 profit_target = session.unit * profit_target_units
