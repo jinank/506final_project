@@ -32,8 +32,9 @@ class FriendPattern:
             self.sequence = ['P', 'B']
         elif pattern_type == 'terrific_twos':
             self.sequence = None
+            self.idx = 0
             self.free_outcome = None
-        elif pattern_type == 'chop':
+        elif pattern_type == 'chop'::
             self.sequence = None
             self.last_outcome = None
         elif pattern_type == 'follow_last':
@@ -41,9 +42,11 @@ class FriendPattern:
             self.last_outcome = None
         elif pattern_type == 'three_pattern':
             self.sequence = None
+            self.idx = 0
             self.free_outcome = None
         elif pattern_type == 'one_two_one':
             self.sequence = None
+            self.idx = 0
             self.free_outcome = None
         elif pattern_type == 'two_three_two_pattern':
             self.sequence = None
