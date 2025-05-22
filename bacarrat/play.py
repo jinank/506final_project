@@ -32,24 +32,22 @@ class FriendPattern:
         self.idx = 0
         self.last_outcome = None
 
-        # Per-friend history of results
+        # History of this friend's bets
         self.history: List[str] = []
 
-        # Initialize fixed sequences
         p = pattern_type
         if p == 'alternator_start_banker':
-            self.sequence = ['B','P']
+            self.sequence = ['B', 'P']
         elif p == 'alternator_start_player':
-            self.sequence = ['P','B']
-        # terrific_twos, chop, three_pattern, one_two_one, two_three_two, follow_last
-        # will initialize in record_hand()
+            self.sequence = ['P', 'B']
+        # Other sequences initialized in record_hand()
 
     def next_bet_choice(self) -> str:
         p = self.pattern_type
-        # Patterns waiting for free hand
+        # Patterns that wait for first non-tie
         if p in ('terrific_twos','three_pattern','one_two_one','two_three_two'):
             if self.free_outcome is None:
-                return ''  # free hand
+                return ''
             return self.sequence[self.idx]
         if p == 'chop':
             if self.free_outcome is None:
@@ -59,7 +57,7 @@ class FriendPattern:
             if self.last_outcome is None:
                 return ''
             return self.last_outcome
-        # Alternators & fixed
+        # Alternators and fixed
         if self.sequence:
             return self.sequence[self.idx]
         return 'B' if p == 'banker_only' else 'P'
@@ -75,7 +73,7 @@ class FriendPattern:
     def record_hand(self, outcome: str, unit: float):
         p = self.pattern_type
 
-        # Initialize dynamic sequences on first non-tie
+        # Initialize sequences on first non-tie
         if p == 'terrific_twos' and self.free_outcome is None and outcome in ('B','P'):
             base = outcome; alt = 'P' if base=='B' else 'B'
             self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
@@ -111,17 +109,15 @@ class FriendPattern:
         pred = self.next_bet_choice()
         if pred == '':
             if self.sequence:
-                self.idx = (self.idx + 1) % len(self.sequence)
+                self.idx = (self.idx+1) % len(self.sequence)
             self.history.append(''); return
 
-        # Determine hit/miss
         bet_amt = self.next_bet_amount(unit)
         self.last_bet_amount = bet_amt
         hit = (outcome == pred)
         self.last_hit = hit
         self.history.append('✔' if hit else '✘')
 
-        # First real bet: skip miss/progression
         if self.first_bet:
             self.first_bet = False
             if hit:
@@ -129,7 +125,7 @@ class FriendPattern:
             else:
                 self.total_misses += 1; self.win_streak = 0
             if self.sequence:
-                self.idx = (self.idx + 1) % len(self.sequence)
+                self.idx = (self.idx+1) % len(self.sequence)
             if p == 'follow_last' and outcome in ('B','P'):
                 self.last_outcome = outcome
             return
@@ -139,23 +135,18 @@ class FriendPattern:
             self.total_hits += 1; self.win_streak += 1
             if self.win_streak == 1 and bet_amt != unit:
                 self.double_next = True
-            # reset ONLY for banker_only/player_only
             if self.win_streak >= 2 and p in ('banker_only','player_only'):
-                self.miss_count = 0
-                self.step = 0
-                self.win_streak = 0
-                self.double_next = False
+                self.miss_count = 0; self.step = 0
+                self.win_streak = 0; self.double_next = False
         else:
             self.total_misses += 1; self.win_streak = 0
             self.miss_count += 1
             self.step = min(self.miss_count, 11)
 
-        # Advance pattern index
         if self.sequence:
-            self.idx = (self.idx + 1) % len(self.sequence)
+            self.idx = (self.idx+1) % len(self.sequence)
         if p == 'follow_last' and outcome in ('B','P'):
             self.last_outcome = outcome
-
 
 # --- Session ---
 class Session:
@@ -169,11 +160,10 @@ class Session:
             'banker_only','player_only',
             'alternator_start_banker','alternator_start_player',
             'terrific_twos','chop',
-            'three_pattern','one_two_one',
-            'two_three_two','follow_last'
+            'follow_last','three_pattern',
+            'one_two_one','two_three_two'
         ]
-        self.friends = [FriendPattern(f'Friend {i+1}', types[i])
-                        for i in range(10)]
+        self.friends = [FriendPattern(f'Friend {i+1}', types[i]) for i in range(10)]
         self.history = []
 
     def add_hand(self, outcome: str):
@@ -196,8 +186,7 @@ class Session:
             })
         return pd.DataFrame(rows)
 
-
-# --- Streamlit UI ---
+# --- Streamlit App ---
 st.set_page_config(layout='wide')
 if 'session' not in st.session_state:
     st.session_state['session'] = Session()
@@ -238,13 +227,12 @@ header = ["Metric"] + list(t.columns)
 values = [t.index.tolist()] + [t[c].tolist() for c in t.columns]
 num = len(values[0])
 
-# Highlight Next Bet/Amount if Miss Count ≥ 5
-cell_colors = [["white"]*num]
+cell_colors = [["white"] * num]
 for col in t.columns:
     miss = t.at['Miss Count', col]
     col_col = []
     for metric in t.index:
-        if metric in ("Next Bet","Next Amount") and miss >= 5:
+        if metric in ("Next Bet", "Next Amount") and miss >= 5:
             col_col.append("lightgreen")
         else:
             col_col.append("white")
@@ -252,14 +240,14 @@ for col in t.columns:
 
 fig = go.Figure(data=[go.Table(
     header=dict(values=header, fill_color="darkblue",
-                font=dict(color="white",size=14), align="center"),
+                font=dict(color="white", size=14), align="center"),
     cells=dict(values=values, fill_color=cell_colors,
-               font=dict(color="black",size=12), align="center")
+               font=dict(color="black", size=12), align="center")
 )])
 fig.update_layout(height=600)
 st.plotly_chart(fig, use_container_width=True)
 
-# Detailed per-friend history
+# Detailed history
 if sess.history:
     hist_df = pd.DataFrame(
         {f.name: f.history for f in sess.friends},
