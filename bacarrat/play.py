@@ -1,4 +1,4 @@
-# Bakura 6-Friend MVP with Star 2.0 Grid Layout (Chop & Terrific Twos & Alternators)
+# play.py
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -9,7 +9,7 @@ class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
         self.pattern_type = pattern_type
-        # Star 2.0 tracking
+        # Star 2.0 progression
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
@@ -17,180 +17,222 @@ class FriendPattern:
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
-        # Double-on-first-win flag
+        # Double-on-first-win
         self.double_next = False
         self.last_bet_amount = 0
-        # Skip miss count on first bet
+        # Skip miss on very first bet
         self.first_bet = True
-        # Pattern-specific state
+        # Sequence for patterned players
         if pattern_type == 'alternator_start_banker':
             self.sequence = ['B','P']
-            self.seq_index = 0
+            self.idx = 0
         elif pattern_type == 'alternator_start_player':
             self.sequence = ['P','B']
-            self.seq_index = 0
+            self.idx = 0
         elif pattern_type == 'terrific_twos':
             self.sequence = None
-            self.seq_index = 0
+            self.idx = 0
             self.free_outcome = None
-        elif pattern_type == 'chop':
-            self.sequence = None
-            self.seq_index = None
-            self.free_outcome = None
+        elif pattern_type == 'follow_last':
+            # will bet whatever the last non-Tie outcome was
             self.last_outcome = None
+            self.sequence = None
+            self.idx = None
         else:
             self.sequence = None
-            self.seq_index = None
+            self.idx = None
 
     def next_bet_choice(self) -> str:
-        # Terrific Twos: free until first outcome, then fixed sequence
         if self.pattern_type == 'terrific_twos':
+            # free until free_outcome set
             if self.free_outcome is None:
                 return ''
-            return self.sequence[self.seq_index]
-        # Chop: free until first outcome, then bet opposite of last outcome
-        if self.pattern_type == 'chop':
-            if self.free_outcome is None:
+            return self.sequence[self.idx]
+        if self.pattern_type == 'follow_last':
+            # first non-tie: free hand
+            if self.last_outcome is None:
                 return ''
-            return 'P' if self.last_outcome == 'B' else 'B'
-        # Alternators follow their sequence
+            return self.last_outcome
         if self.sequence is not None:
-            return self.sequence[self.seq_index]
-        # Fixed patterns
-        return 'B' if self.pattern_type == 'banker_only' else 'P'
+            return self.sequence[self.idx]
+        return 'B' if self.pattern_type=='banker_only' else 'P'
 
     def next_bet_amount(self, unit: float) -> float:
         if self.double_next:
             self.double_next = False
             return self.last_bet_amount * 2
-        # Star 2.0 multipliers (12-step)
-        self.mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
-        seq = [unit * m for m in self.mults]
-        idx = min(self.step, len(seq)-1)
-        return seq[idx]
+        # 12-step Star 2.0
+        mult = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+        seq = [unit*m for m in mult]
+        return seq[min(self.step,len(seq)-1)]
 
-        def record_hand(self, outcome: str, unit: float):
-        # local Star multipliers for progression
-            mults = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
-        # 1) Terrific Twos initialization
-        if self.pattern_type == 'terrific_twos':
-            if self.free_outcome is None and outcome in ['B','P']:
-                self.free_outcome = outcome
-                base, alt = outcome, 'P' if outcome=='B' else 'B'
-                self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
-                self.seq_index = 0
+    def record_hand(self, outcome: str, unit: float):
+        # Terrific Twos init
+        if self.pattern_type=='terrific_twos':
+            if self.free_outcome is None and outcome in ('B','P'):
+                base=outcome
+                alt='P' if base=='B' else 'B'
+                self.sequence=[base,base,alt,alt,base,base,alt,alt,base,base]
+                self.idx=0
+                self.free_outcome=base
                 return
-        # 2) Chop initialization
-        if self.pattern_type == 'chop':
-            if self.free_outcome is None and outcome in ['B','P']:
-                self.free_outcome = outcome
+
+        # Follow-last init
+        if self.pattern_type=='follow_last':
+            if outcome in ('B','P') and self.last_outcome is None:
                 self.last_outcome = outcome
                 return
-        # 3) Prediction
-        predicted = self.next_bet_choice()
-        if predicted == '':
+
+        # Determine prediction
+        pred = self.next_bet_choice()
+        if pred=='':
+            # free hand (terrific_twos first or follow_last first)
+            # advance only patterned idx
+            if self.sequence is not None:
+                self.idx = (self.idx+1)%len(self.sequence)
             return
-        # 4) First actual bet: record hit/miss but skip miss_count and step
-        hit = (outcome == predicted)
-        self.last_hit = hit
-        if self.first_bet:
-            self.first_bet = False
-            if hit:
-                self.total_hits += 1
-                self.win_streak += 1
-            else:
-                self.total_misses += 1
-                self.win_streak = 0
-            # Advance sequence pointer
-            if self.sequence:
-                self.seq_index = (self.seq_index + 1) % len(self.sequence)
-            if self.pattern_type == 'chop':
-                self.last_outcome = outcome
-            return
-        # 5) Standard Star 2.0 progression
+
+        # store last bet amt
         self.last_bet_amount = self.next_bet_amount(unit)
+        hit = (outcome==pred)
+        self.last_hit = hit
+
+        # Skip counting miss on the very first bet
+        if self.first_bet:
+            self.first_bet=False
+            # update hits/win_streak only
+            if hit:
+                self.total_hits+=1
+                self.win_streak+=1
+            else:
+                self.total_misses+=1
+                self.win_streak=0
+            # advance any sequence pointer
+            if self.sequence is not None:
+                self.idx=(self.idx+1)%len(self.sequence)
+            if self.pattern_type=='follow_last' and outcome in ('B','P'):
+                self.last_outcome=outcome
+            return
+
+        # Star 2.0 progression
         if hit:
-            self.total_hits += 1
-            self.win_streak += 1
-            if self.win_streak == 1 and self.last_bet_amount != unit:
-                self.double_next = True
-            if self.win_streak >= 2:
+            self.total_hits+=1
+            self.win_streak+=1
+            # double next if first win not at base unit
+            if self.win_streak==1 and self.last_bet_amount!=unit:
+                self.double_next=True
+            # reset after two straight
+            if self.win_streak>=2:
                 self._reset_progression()
         else:
-            self.total_misses += 1
-            self.win_streak = 0
-            self.miss_count += 1
-            self.step = min(self.miss_count, len(mults)-1)
-        # 6) Advance pattern pointer and state
-        if self.sequence:
-            self.seq_index = (self.seq_index + 1) % len(self.sequence)
-        if self.pattern_type=='chop':
-            self.last_outcome = outcome
+            self.total_misses+=1
+            self.win_streak=0
+            self.miss_count+=1
+            max_step = 11
+            self.step = min(self.miss_count, max_step)
+
+        # Advance any sequence pointers
+        if self.sequence is not None:
+            self.idx=(self.idx+1)%len(self.sequence)
+        if self.pattern_type=='follow_last' and outcome in ('B','P'):
+            self.last_outcome=outcome
 
     def _reset_progression(self):
-        self.miss_count = 0
-        self.step = 0
-        self.win_streak = 0
-        self.double_next = False
+        self.miss_count=0
+        self.step=0
+        self.win_streak=0
+        self.double_next=False
 
 class Session:
     def __init__(self):
         self.unit=10.0
         self.history:List[str]=[]
         self.reset_patterns()
+
     def reset_patterns(self):
-        pats=['banker_only','player_only','alternator_start_banker','alternator_start_player','terrific_twos','chop']
+        pats=['banker_only','player_only',
+              'alternator_start_banker','alternator_start_player',
+              'terrific_twos','follow_last']
         self.friends=[FriendPattern(f'Friend {i+1}',pats[i]) for i in range(len(pats))]
         self.history=[]
+
     def add_hand(self,outcome:str):
         self.history.append(outcome)
-        for f in self.friends: f.record_hand(outcome,self.unit)
-    def get_state_df(self)->pd.DataFrame:
-        rec=[]
         for f in self.friends:
-            rec.append({
-                'Name':f.name,'Pattern':f.pattern_type,'Last Bet':'Win' if f.last_hit else 'Loss',
-                'Miss Count':f.miss_count,'Next Bet':f.next_bet_choice(),'Next Amount':f.next_bet_amount(self.unit),
-                'Total Hits':f.total_hits,'Total Misses':f.total_misses
+            f.record_hand(outcome,self.unit)
+
+    def get_state_df(self)->pd.DataFrame:
+        rows=[]
+        for f in self.friends:
+            rows.append({
+                'Name':f.name,
+                'Pattern':f.pattern_type,
+                'Last Bet':'Win' if f.last_hit else 'Loss',
+                'Miss Count':f.miss_count,
+                'Next Bet':f.next_bet_choice(),
+                'Next Amount':f.next_bet_amount(self.unit),
+                'Total Hits':f.total_hits,
+                'Total Misses':f.total_misses
             })
-        return pd.DataFrame(rec)
+        return pd.DataFrame(rows)
 
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
-if 'session' not in st.session_state: st.session_state['session']=Session()
+if 'session' not in st.session_state:
+    st.session_state['session']=Session()
 session=st.session_state['session']
+
+# Sidebar
 with st.sidebar:
     st.title('Bakura 6-Friend MVP')
-    session.unit=st.number_input('Unit Size',1.0,step=0.5,value=session.unit)
-    if st.button('New Shoe'): session.reset_patterns()
-cols=st.columns(3)
-if cols[0].button('Record Banker'): session.add_hand('B')
-if cols[1].button('Record Player'): session.add_hand('P')
-if cols[2].button('Record Tie'): session.add_hand('T')
-# Star 2.0 Sequence
+    session.unit = st.number_input('Unit Size',1.0,step=0.5,value=session.unit)
+    if st.button('New Shoe'):
+        session.reset_patterns()
+
+# Hand input
+c1,c2,c3=st.columns(3)
+with c1:
+    if st.button('Record Banker'):
+        session.add_hand('B')
+with c2:
+    if st.button('Record Player'):
+        session.add_hand('P')
+with c3:
+    if st.button('Record Tie'):
+        session.add_hand('T')
+
+# Star 2.0 Sequence Grid
 star=[1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
-df_star=pd.DataFrame([[session.unit*m for m in star]],index=['Bet Amount'],columns=list(range(1,13)))
+df_star=pd.DataFrame([[session.unit*m for m in star]],
+                     index=['Bet Amount'],columns=list(range(1,13)))
 st.write('### Star 2.0 Sequence')
 st.dataframe(df_star,use_container_width=True)
-# Dashboard
+
+# Friend Dashboard
 st.write('### Friend Dashboard')
 df=session.get_state_df()
 t_df=df.set_index('Name').T
-t_df.loc['History']=[' '.join(session.history)]*len(t_df.columns)
+t_df.loc['History']= [' '.join(session.history)]*len(t_df.columns)
 header=['Metric']+list(t_df.columns)
 values=[t_df.index.tolist()]+[t_df[c].tolist() for c in t_df.columns]
 num=len(values[0])
+# Highlight Next Bet/Amount when Miss Count>=5
 cell_colors=[['white']*num]
-for c in t_df.columns:
-    miss=t_df.at['Miss Count',c]
+for col in t_df.columns:
+    miss=t_df.at['Miss Count',col]
     cols=[]
     for m in t_df.index:
-        if m in ['Next Bet','Next Amount'] and miss>=5: cols.append('lightgreen')
-        else: cols.append('white')
+        cols.append('lightgreen' if m in ('Next Bet','Next Amount') and miss>=5 else 'white')
     cell_colors.append(cols)
-fig=go.Figure(data=[go.Table(header=dict(values=header,fill_color='darkblue',font=dict(color='white',size=14),align='center'),cells=dict(values=values,fill_color=cell_colors,font=dict(color='black',size=12),align='center',height=30))])
+fig=go.Figure(data=[go.Table(
+    header=dict(values=header,fill_color='darkblue',
+                font=dict(color='white',size=14),align='center'),
+    cells=dict(values=values,fill_color=cell_colors,
+               font=dict(color='black',size=12),align='center',height=30)
+)])
 fig.update_layout(height=550)
 st.plotly_chart(fig,use_container_width=True)
+
 # Summary
 st.write('### Total Needed for Star Progression')
 st.write(df_star.iloc[0].sum())
