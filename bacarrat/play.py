@@ -146,6 +146,7 @@ class Session:
             'alternator_start_banker',
             'alternator_start_player',
             'terrific_twos',
+            'two_three_two',
             'follow_last'
         ]
         self.friends = [FriendPattern(f'Friend {i+1}', patterns[i]) for i in range(len(patterns))]
