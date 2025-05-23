@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -12,16 +13,21 @@ class FriendPattern:
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
+
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
+
         self.double_next = False
         self.last_bet_amount = 0.0
+
         self.first_bet = True
+
         self.free_outcome = None
         self.sequence = None
         self.idx = 0
         self.last_outcome = None
+
         self.history: List[str] = []
 
         p = pattern_type
@@ -52,29 +58,30 @@ class FriendPattern:
 
     def record_hand(self, outcome: str, unit: float):
         p = self.pattern_type
+        # initialization for sequences
         if p=='terrific_twos' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[base,base,alt,alt,base,base,alt,alt,base,base]
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='three_pattern' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[base]*2 + [alt]*3 + [base]*3 + [alt]*3
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base]*2 + [alt]*3 + [base]*3 + [alt]*3
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='one_two_one' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[alt,alt,base]*3
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [alt,alt,base] * 3
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='two_three_two' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[base] + [alt]*3 + [base]*2 + [alt]*3 + [base]*2
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base] + [alt]*3 + [base]*2 + [alt]*3 + [base]*2
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='pattern_1313' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[alt,alt,alt,base]
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [alt,alt,alt,base]
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='chop' and self.free_outcome is None and outcome in ('B','P'):
@@ -110,16 +117,17 @@ class FriendPattern:
 
         if hit:
             self.total_hits += 1; self.win_streak += 1
-            if self.win_streak==1 and amt!=unit:
-                self.double_next=True
-            if self.win_streak>=2:
-                self.miss_count=0; self.step=0; self.win_streak=0; self.double_next=False
+            if self.win_streak == 1 and amt != unit:
+                self.double_next = True
+            if self.win_streak >= 2:
+                self.miss_count = 0; self.step = 0
+                self.win_streak = 0; self.double_next = False
         else:
-            self.total_misses+=1; self.win_streak=0
-            self.miss_count+=1; self.step=min(self.miss_count,11)
+            self.total_misses += 1; self.win_streak = 0
+            self.miss_count += 1; self.step = min(self.miss_count, 11)
 
         if self.sequence:
-            self.idx=(self.idx+1)%len(self.sequence)
+            self.idx = (self.idx + 1) % len(self.sequence)
         if p=='follow_last' and outcome in ('B','P'):
             self.last_outcome = outcome
 
@@ -130,133 +138,144 @@ class Session:
         self.reset()
 
     def reset(self):
-        types=[
+        types = [
             'banker_only','player_only',
             'alternator_start_banker','alternator_start_player',
             'terrific_twos','chop',
             'follow_last','three_pattern',
             'one_two_one','two_three_two','pattern_1313'
         ]
-        self.friends=[FriendPattern(f'Friend {i+1}',types[i]) for i in range(len(types))]
-        self.history=[]
+        self.friends = [
+            FriendPattern(f'Friend {i+1}', types[i])
+            for i in range(len(types))
+        ]
+        self.history = []
 
-    def add_hand(self,outcome:str):
+    def add_hand(self, outcome: str):
         self.history.append(outcome)
         for f in self.friends:
-            f.record_hand(outcome,self.unit)
+            f.record_hand(outcome, self.unit)
 
-    def get_state_df(self)->pd.DataFrame:
-        rows=[]
+    def get_state_df(self) -> pd.DataFrame:
+        rows = []
         for f in self.friends:
             rows.append({
-                'Name':f.name,
-                'Pattern':f.pattern_type,
-                'Last Bet':'Win' if f.last_hit else 'Loss',
-                'Miss Count':f.miss_count,
-                'Next Bet':f.next_bet_choice(),
-                'Next Amount':f.next_bet_amount(self.unit),
-                'Hits':f.total_hits,
-                'Misses':f.total_misses
+                'Name': f.name,
+                'Pattern': f.pattern_type,
+                'Last Bet': 'Win' if f.last_hit else 'Loss',
+                'Miss Count': f.miss_count,
+                'Next Bet': f.next_bet_choice(),
+                'Next Amount': f.next_bet_amount(self.unit),
+                'Hits': f.total_hits,
+                'Misses': f.total_misses
             })
         return pd.DataFrame(rows)
 
-# Precomputed odds
-WIN_PROB={'B':0.4586,'P':0.4462}
+# Precomputed single-hand win probabilities
+WIN_PROB = {'B': 0.4586, 'P': 0.4462}
 
-# App
+# Streamlit app
 st.set_page_config(layout='wide')
 if 'session' not in st.session_state:
-    st.session_state['session']=Session()
-session=st.session_state['session']
+    st.session_state['session'] = Session()
+session = st.session_state['session']
 
-# Meta-Strategy
-best_p=0.0; cands=[]
-for f in session.friends:
-    b1=f.next_bet_choice()
-    if b1 not in WIN_PROB: continue
-    if f.sequence:
-        idx2=(f.idx+1)%len(f.sequence); b2=f.sequence[idx2]
-    else:
-        b2=b1 if f.pattern_type!='follow_last' else (f.last_outcome or b1)
-    p=WIN_PROB[b1]*WIN_PROB.get(b2,WIN_PROB[b1])
-    if p>best_p+1e-6:
-        best_p=p; cands=[(f,b1)]
-    elif abs(p-best_p)<1e-6:
-        cands.append((f,b1))
-
+# Sidebar: unit size and reset
 with st.sidebar:
     st.title("Bakura 11-Friend MVP")
-    session.unit=st.number_input("Unit Size",1.0,step=0.5,value=session.unit)
-    if st.button("New Shoe"): session.reset()
+    session.unit = st.number_input("Unit Size", 1.0, step=0.5, value=session.unit)
+    if st.button("New Shoe"):
+        session.reset()
 
-    if cands:
-        bets={b for _,b in cands}
-        if len(cands)>1 and len(bets)>1:
-            mb,ma="NB",""
+    # Meta-Strategy via EV maximization
+    best_ev = -1e9
+    ev_cands = []
+    for f in session.friends:
+        b1 = f.next_bet_choice()
+        if b1 not in WIN_PROB: continue
+        # next-hand prediction
+        if f.sequence:
+            b2 = f.sequence[(f.idx+1) % len(f.sequence)]
         else:
-            f0,b0=cands[0]
-            mb=b0; ma=f"${f0.next_bet_amount(session.unit):.2f}"
-        st.markdown(f'''**Meta (2-step p ≈ {best_p:.1%})**  
-Friends: {', '.join(f.name for f,_ in cands)}  
-Bet:&nbsp;{mb}  
-Amt:&nbsp;{ma}''')
+            b2 = b1
+        p1, p2 = WIN_PROB[b1], WIN_PROB[b2]
+        pay1 = 0.95 if b1=='B' else 1.0
+        pay2 = 0.95 if b2=='B' else 1.0
+        # D of Star Stage 1 parlay: bet unit then 2*unit
+        u = session.unit
+        ev = (
+            p1*p2*( pay1*u + pay2*(2*u) ) + 
+            p1*(1-p2)*( pay1*u - ( u + 2*u ) ) +
+            (1-p1)*( -u )
+        )
+        if ev > best_ev + 1e-6:
+            best_ev = ev; ev_cands = [(f,b1)]
+        elif abs(ev - best_ev) < 1e-6:
+            ev_cands.append((f,b1))
 
-    top_miss=max(f.miss_count for f in session.friends)
-    tfs=[f for f in session.friends if f.miss_count==top_miss]
-    names=", ".join(f.name for f in tfs)
-    bets2={f.next_bet_choice() for f in tfs}
-    if len(tfs)>1 and len(bets2)>1:
-        tb,ta="NB",""
-    else:
-        tb=bets2.pop(); ta=f"${max(f.next_bet_amount(session.unit) for f in tfs):.2f}"
-    st.markdown(f'''<div style="background:orange;padding:8px;border-radius:4px;">
-Top Misses: {names}<br>
-Count: {top_miss}<br>
-Next: {tb}&nbsp;{ta}
-</div>''',unsafe_allow_html=True)
+    # display EV-based meta block
+    if ev_cands:
+        bets = {b for _,b in ev_cands}
+        if len(ev_cands)>1 and len(bets)>1:
+            meta_bet, meta_amt = "NB", ""
+        else:
+            f0, b0 = ev_cands[0]
+            meta_bet      = b0
+            meta_amt      = f"${f0.next_bet_amount(session.unit):.2f}"
+        st.markdown(f"**Meta-EV**: {best_ev:.2f}  \n"
+                    f"Patnrs: {', '.join(f.name for f,_ in ev_cands)}  \n"
+                    f"Bet: {meta_bet}  \n"
+                    f"Amt: {meta_amt}")
 
-c1,c2,c3=st.columns(3)
+# Hand entry buttons
+c1, c2, c3 = st.columns(3)
 with c1:
-    if st.button("Record Banker"): session.add_hand('B')
+    if st.button("Record Banker"):
+        session.add_hand('B')
 with c2:
-    if st.button("Record Player"): session.add_hand('P')
+    if st.button("Record Player"):
+        session.add_hand('P')
 with c3:
-    if st.button("Record Tie"): session.add_hand('T')
+    if st.button("Record Tie"):
+        session.add_hand('T')
 
-star_mult=[1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
-star_df=pd.DataFrame([[session.unit*m for m in star_mult]],
-                     index=['Bet Amt'],columns=list(range(1,13)))
+# Star 2.0 progression table
+star_mult = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+star_df = pd.DataFrame([[session.unit*m for m in star_mult]],
+                       index=['Bet Amt'], columns=list(range(1,13)))
 st.write("### Star 2.0 Progression (12 steps)")
-st.dataframe(star_df,use_container_width=True)
+st.dataframe(star_df, use_container_width=True)
 
-df=session.get_state_df()
-t_df=df.set_index('Name').T
-t_df.loc["History"]=[" ".join(session.history)]*len(t_df.columns)
-header=["Metric"]+list(t_df.columns)
-values=[t_df.index.tolist()]+[t_df[c].tolist() for c in t_df.columns]
-num=len(values[0])
-cell_colors=[["white"]*num]
+# Friend dashboard
+df = session.get_state_df()
+t_df = df.set_index('Name').T
+t_df.loc["History"] = [" ".join(session.history)] * len(t_df.columns)
+header = ["Metric"] + list(t_df.columns)
+values = [t_df.index.tolist()] + [t_df[c].tolist() for c in t_df.columns]
+num = len(values[0])
+cell_colors = [["white"]*num]
 for col in t_df.columns:
-    miss=t_df.at['Miss Count',col]
-    col_col=["lightgreen" if m in ("Next Bet","Next Amount") and miss>=5 else "white"
-             for m in t_df.index]
+    miss = t_df.at['Miss Count', col]
+    col_col = [("lightgreen" if m in ("Next Bet","Next Amount") and miss>=5 else "white")
+               for m in t_df.index]
     cell_colors.append(col_col)
-fig=go.Figure(data=[go.Table(
-    header=dict(values=header,fill_color="darkblue",
-                font=dict(color="white"),align="center"),
-    cells=dict(values=values,fill_color=cell_colors,
-               font=dict(color="black"),align="center")
+fig = go.Figure(data=[go.Table(
+    header=dict(values=header, fill_color="darkblue",
+                font=dict(color="white"), align="center"),
+    cells=dict(values=values, fill_color=cell_colors,
+               font=dict(color="black"), align="center")
 )])
 fig.update_layout(height=600)
-st.plotly_chart(fig,use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
+# Detailed per-hand history
 if session.history:
-    hist_df=pd.DataFrame(
-        {f.name:f.history for f in session.friends},
-        index=[f"Hand {i+1}" for i in range(len(session.history))]
-    )
+    hist_df = pd.DataFrame({f.name: f.history for f in session.friends},
+                           index=[f"Hand {i+1}" for i in range(len(session.history))])
     st.write("### Detailed Hand History")
-    st.dataframe(hist_df,use_container_width=True)
+    st.dataframe(hist_df, use_container_width=True)
 
+# Session summary
 st.write("### Session Summary")
-st.write(f"Hands: {len(session.history)}  Target(+20×unit): {20*session.unit}  Stop(–60×unit): {60*session.unit}")
+st.write(f"Hands: {len(session.history)}  Target(+20×unit): {20*session.unit}  "
+         f"Stop(–60×unit): {60*session.unit}")
