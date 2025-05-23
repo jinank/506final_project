@@ -198,6 +198,50 @@ if 'session' not in st.session_state:
     st.session_state['session'] = Session()
 session = st.session_state['session']
 
+# pre‐computed single‐hand win odds
+WIN_PROB = {'B': 0.4586, 'P': 0.4462}
+
+# compute for each friend f the two‐step hit probability
+best_p = 0.0
+best_candidates = []
+for f in session.friends:
+    # 1) what they bet *now*
+    b1 = f.next_bet_choice()
+    if b1 not in WIN_PROB:
+        continue   # skip free‐hand patterns
+    # 2) simulate their internal idx advancing by 1
+    if f.sequence:
+        idx2 = (f.idx + 1) % len(f.sequence)
+        b2 = f.sequence[idx2]
+    elif f.pattern_type == 'follow_last':
+        b2 = f.next_bet_choice()  # same as b1
+    else:
+        b2 = b1
+    p = WIN_PROB[b1] * WIN_PROB[b2]
+    # collect the top
+    if p > best_p + 1e-6:
+        best_p = p
+        best_candidates = [(f, b1)]
+    elif abs(p - best_p) < 1e-6:
+        best_candidates.append((f, b1))
+
+# now decide what to display
+if len(best_candidates) > 1 and len({b for _,b in best_candidates}) > 1:
+    display_bet = "NB"
+    display_amt = ""
+else:
+    f_chosen, b_chosen = best_candidates[0]
+    display_bet = b_chosen
+    display_amt = f"${f_chosen.next_bet_amount(session.unit):.2f}"
+
+st.sidebar.markdown(f"""
+### Meta‐Strategy
+**Best Friend(s):** {', '.join(f.name for f,_ in best_candidates)}  
+**2-hit Prob:** {best_p:.1%}  
+**Next Bet:** {display_bet}  
+**Amount:** {display_amt}
+""")
+
 # — Sidebar with Top Misses info —
 with st.sidebar:
     st.title("Bakura 11-Friend MVP")
