@@ -3,7 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from typing import List
 
-# --- Friend / pattern model ---
+
+#Friend / pattern model ---
 class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
