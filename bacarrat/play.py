@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -182,7 +181,7 @@ session = st.session_state['session']
 
 # Sidebar: unit size and reset
 with st.sidebar:
-    st.title("Bakura 11-Friend MVP")
+    st.title("Bakura 11-Friend MVP1")
     session.unit = st.number_input("Unit Size", 1.0, step=0.5, value=session.unit)
     if st.button("New Shoe"):
         session.reset()
