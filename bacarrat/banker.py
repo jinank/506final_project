@@ -166,7 +166,7 @@ session=st.session_state['session']
 
 # Sidebar
 with st.sidebar:
-    st.title("Bakura 11-Friend MVP2")
+    st.title("Bakura 11-Friend MVP 2")
     session.unit=st.number_input("Unit Size",1.0,step=0.5,value=session.unit)
     if st.button("New Shoe"): session.reset()
 
