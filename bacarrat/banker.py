@@ -14,12 +14,12 @@ class BankerProgression:
         self.new_series()
     
     def new_series(self):
-        \"\"\"Start a new Star 2.0 attempt (Stage 1).\"\"\"
+        #Start a new Star 2.0 attempt (Stage 1)
         self.stage = 1
         self.next_bet = self.unit
 
     def reset_all(self):
-        \"\"\"Clear entire session and series.\"\"\"
+        #\"\"\"Clear entire session and series.\"\"\"
         self.history.clear()
         self.sessions = 0
         self.successes = 0
@@ -27,7 +27,7 @@ class BankerProgression:
         self.new_series()
 
     def record_hand(self, outcome: str):
-        \"\"\"Record a single hand result: 'B','P','T'.\"\"\"
+        #\"\"\"Record a single hand result: 'B','P','T'.\"\"\"
         # ties push: collect history, no stage change
         if outcome == 'T':
             self.history.append((len(self.history)+1, outcome, self.next_bet))
