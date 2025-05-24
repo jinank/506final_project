@@ -1,6 +1,3 @@
-# Reinstate dynamic sequence initialization and conservative highlighting for >10 misses
-
-code = """
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -270,9 +267,3 @@ if session.history:
 # Summary
 st.write("### Session Summary")
 st.write(f"Hands: {len(session.history)}  Target(+20×unit): {20*session.unit}  Stop(-60×unit): {60*session.unit}")
-"""
-
-with open('/mnt/data/play.py','w') as f:
-    f.write(code)
-
-
