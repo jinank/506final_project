@@ -225,7 +225,10 @@ with st.sidebar:
         b1 = f.next_bet_choice()
         if b1 not in WIN_PROB:
             continue
-        amt1 = f.next_bet_amount(session.unit)
+        # assume we will be on the *next* progression step
+        mult = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+        idx  = min(f.step + 1, len(mult) - 1)
+        amt1 = session.unit * mult[idx]
         amt2 = amt1 * 2
         b2 = f.sequence[(f.idx+1)%len(f.sequence)] if f.sequence else b1
         p1,p2 = WIN_PROB[b1], WIN_PROB[b2]
