@@ -101,12 +101,18 @@ class FriendPattern:
         # First real bet skip miss count
         if self.first_bet:
             self.first_bet = False
-            self.total_hits += int(hit)
-            self.total_misses += int(not hit)
-            self.win_streak = 1 if hit else 0
+            if hit:
+                self.total_hits += 1
+                self.win_streak += 1
+            else:
+                self.total_misses += 1
+                self.win_streak = 0
+                # immediately start counting your first miss:
+                self.miss_count = 1
+                self.step       = 1
             if self.sequence:
                 self.idx = (self.idx + 1) % len(self.sequence)
-            if p=='follow_last' and outcome in ('B','P'):
+            if p == 'follow_last' and outcome in ('B','P'):
                 self.last_outcome = outcome
             return
 
