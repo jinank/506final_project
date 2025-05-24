@@ -63,6 +63,7 @@ class FriendPattern:
         if self.double_next:
             self.double_next = False
             return self.last_bet_amount * 2
+        # Star 2.0 multipliers: 1×, 1.5×, 2.5×, 2.5×, 5×, 5×, 7.5×, 10×, 12.5×, 17.5×, 22.5×, 30×
         mult = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
         idx = max(0, min(self.step, len(mult)-1))
         amt = unit * mult[idx]
@@ -71,46 +72,59 @@ class FriendPattern:
 
     def record_hand(self, outcome: str, unit: float):
         p = self.pattern_type
-        # dynamic sequences init...
         pred = self.next_bet_choice()
+        # handle free hand
         if pred == '':
             if self.sequence:
                 self.idx = (self.idx + 1) % len(self.sequence)
-            self.history.append(''); return
+            self.history.append('')
+            return
 
+        # execute bet
         amt = self.next_bet_amount(unit)
         hit = (outcome == pred)
         self.last_hit = hit
         self.history.append('✔' if hit else '✘')
 
+        # first real bet
         if self.first_bet:
             self.first_bet = False
             if hit:
-                self.total_hits += 1; self.win_streak += 1
+                self.total_hits += 1
+                self.win_streak += 1
             else:
-                self.total_misses += 1; self.win_streak = 0
-            if not hit:
-                self.miss_count = 1; self.step = 1
+                self.total_misses += 1
+                self.win_streak = 0
+                self.miss_count = 1
+                self.step = 1
             if self.sequence:
                 self.idx = (self.idx + 1) % len(self.sequence)
             if p=='follow_last' and outcome in ('B','P'):
                 self.last_outcome = outcome
             return
 
+        # Star 2.0 progression
         if hit:
-            self.total_hits += 1; self.win_streak += 1
+            self.total_hits += 1
+            self.win_streak += 1
             if self.win_streak == 1 and amt != unit:
                 self.double_next = True
             if self.win_streak >= 2:
-                self.miss_count = 0; self.step = 0; self.win_streak = 0; self.double_next = False
+                self.miss_count = 0
+                self.step = 0
+                self.win_streak = 0
+                self.double_next = False
         else:
-            self.total_misses += 1; self.win_streak = 0
-            self.miss_count += 1; self.step = min(self.miss_count, 11)
+            self.total_misses += 1
+            self.win_streak = 0
+            self.miss_count += 1
+            self.step = min(self.miss_count, 11)
 
         if self.sequence:
             self.idx = (self.idx + 1) % len(self.sequence)
         if p=='follow_last' and outcome in ('B','P'):
             self.last_outcome = outcome
+
 
 class Session:
     def __init__(self):
@@ -149,6 +163,7 @@ class Session:
             })
         return pd.DataFrame(rows)
 
+
 # --- Streamlit App ---
 st.set_page_config(layout='wide')
 if 'session' not in st.session_state:
@@ -162,7 +177,7 @@ with st.sidebar:
     if st.button("New Shoe"):
         session.reset()
 
-    # Conservative approach suggestion
+    # Conservative approach suggestion for friends with >10 misses
     cons = [f.name for f in session.friends if f.miss_count > 10]
     if cons:
         names = ", ".join(cons)
@@ -170,7 +185,7 @@ with st.sidebar:
                     f"Conservative Start: Bet {session.unit} unit on {names}</div>",
                     unsafe_allow_html=True)
 
-# Hand buttons
+# Hand entry buttons
 c1,c2,c3 = st.columns(3)
 with c1:
     if st.button("Record Banker"): session.add_hand('B')
@@ -195,7 +210,6 @@ header = ["Metric"] + list(t_df.columns)
 values = [t_df.index.tolist()] + [t_df[c].tolist() for c in t_df.columns]
 num = len(values[0])
 
-# build cell colors, highlight Name if misses >10, highlight Next Bet/Amount if misses >=5
 cell_colors = [["white"]*num]
 for col in t_df.columns:
     miss = t_df.at['Miss Count', col]
@@ -211,9 +225,9 @@ for col in t_df.columns:
 
 fig = go.Figure(data=[go.Table(
     header=dict(values=header, fill_color="darkblue",
-                font=dict(color="white",size=14),align="center"),
+                font=dict(color="white", size=14), align="center"),
     cells=dict(values=values, fill_color=cell_colors,
-               font=dict(color="black",size=12),align="center")
+               font=dict(color="black", size=12), align="center")
 )])
 fig.update_layout(height=600)
 st.plotly_chart(fig, use_container_width=True)
