@@ -243,3 +243,21 @@ fig=go.Figure(data=[go.Table(
 )])
 fig.update_layout(height=600)
 st.plotly_chart(fig,use_container_width=True)
+
+# — Detailed per-hand history —
+if session.history:
+    hist_df = pd.DataFrame(
+        {f.name: f.history for f in session.friends},
+        index=[f"Hand {i+1}" for i in range(len(session.history))]
+    )
+    st.write("### Detailed Hand History (✔=win, ✘=miss, blank=free)")
+    st.dataframe(hist_df, use_container_width=True)
+
+# — Session summary —
+st.write("### Session Summary")
+st.write(
+    f"Hands: {len(session.history)}  "
+    f"Target(+20×unit): {20*session.unit}  "
+    f"Stop(–60×unit): {60*session.unit}"
+)
+
