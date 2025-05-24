@@ -8,19 +8,23 @@ class FriendPattern:
     def __init__(self, name: str, pattern_type: str):
         self.name = name
         self.pattern_type = pattern_type
+        # Star 2.0 progression
         self.miss_count = 0
         self.step = 0
         self.win_streak = 0
+        # Tracking
         self.last_hit = False
         self.total_hits = 0
         self.total_misses = 0
         self.double_next = False
         self.last_bet_amount = 0.0
         self.first_bet = True
+        # Pattern sequencing
         self.free_outcome = None
         self.sequence = None
         self.idx = 0
         self.last_outcome = None
+        # History
         self.history: List[str] = []
 
         p = pattern_type
@@ -53,30 +57,30 @@ class FriendPattern:
 
     def record_hand(self, outcome: str, unit: float):
         p = self.pattern_type
-        # Initialization for dynamic patterns
+        # Initialization of dynamic patterns
         if p=='terrific_twos' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[base,base,alt,alt,base,base,alt,alt,base,base]
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base,base,alt,alt,base,base,alt,alt,base,base]
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='three_pattern' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[base]*2 + [alt]*3 + [base]*3 + [alt]*3
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base]*2 + [alt]*3 + [base]*3 + [alt]*3
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='one_two_one' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[alt,alt,base]*3
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [alt,alt,base]*3
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='two_three_two' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[base] + [alt]*3 + [base]*2 + [alt]*3 + [base]*2
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [base] + [alt]*3 + [base]*2 + [alt]*3 + [base]*2
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='pattern_1313' and self.free_outcome is None and outcome in ('B','P'):
-            base,alt = outcome,('P' if outcome=='B' else 'B')
-            self.sequence=[alt,alt,alt,base]
+            base, alt = outcome, ('P' if outcome=='B' else 'B')
+            self.sequence = [alt,alt,alt,base]
             self.free_outcome, self.idx = base, 0
             self.history.append(''); return
         if p=='chop' and self.free_outcome is None and outcome in ('B','P'):
@@ -86,33 +90,32 @@ class FriendPattern:
             self.last_outcome = outcome
             self.history.append(''); return
 
-        # Prediction and logging
+        # Prediction
         pred = self.next_bet_choice()
         if pred == '':
             if self.sequence:
                 self.idx = (self.idx + 1) % len(self.sequence)
             self.history.append(''); return
 
+        # Execute bet
         amt = self.next_bet_amount(unit)
         hit = (outcome == pred)
         self.last_hit = hit
         self.history.append('✔' if hit else '✘')
 
-        # First real bet skip miss count
+        # First real bet handling
         if self.first_bet:
             self.first_bet = False
-            if hit:
-                self.total_hits += 1
-                self.win_streak += 1
-            else:
-                self.total_misses += 1
-                self.win_streak = 0
-                # immediately start counting your first miss:
+            self.total_hits += int(hit)
+            self.total_misses += int(not hit)
+            self.win_streak = 1 if hit else 0
+            if not hit:
+                # count first miss as step 1
                 self.miss_count = 1
-                self.step       = 1
+                self.step = 1
             if self.sequence:
                 self.idx = (self.idx + 1) % len(self.sequence)
-            if p == 'follow_last' and outcome in ('B','P'):
+            if p=='follow_last' and outcome in ('B','P'):
                 self.last_outcome = outcome
             return
 
@@ -138,7 +141,7 @@ class FriendPattern:
         if p=='follow_last' and outcome in ('B','P'):
             self.last_outcome = outcome
 
-# --- Session with Meta-EV history ---
+# --- Session with Meta-EV tracking ---
 class Session:
     def __init__(self):
         self.unit = 10.0
@@ -155,10 +158,7 @@ class Session:
             'follow_last','three_pattern',
             'one_two_one','two_three_two','pattern_1313'
         ]
-        self.friends = [
-            FriendPattern(f'Friend {i+1}', types[i])
-            for i in range(len(types))
-        ]
+        self.friends = [FriendPattern(f'Friend {i+1}', types[i]) for i in range(len(types))]
         self.history.clear()
         self.meta_history.clear()
         self.total_meta_pl = 0.0
@@ -187,7 +187,7 @@ class Session:
         })
 
     def get_state_df(self) -> pd.DataFrame:
-        rows=[]
+        rows = []
         for f in self.friends:
             rows.append({
                 'Name': f.name,
@@ -202,7 +202,7 @@ class Session:
         return pd.DataFrame(rows)
 
 # Precomputed odds
-WIN_PROB = {'B':0.4586, 'P':0.4462}
+WIN_PROB = {'B':0.4586,'P':0.4462}
 
 # Streamlit App
 st.set_page_config(layout='wide')
@@ -210,31 +210,31 @@ if 'session' not in st.session_state:
     st.session_state['session'] = Session()
 session = st.session_state['session']
 
-# Pre-declare Meta variables
+# Pre-declare Meta vars
 best_ev = -1e9
 ev_cands = []
 friend0 = None
 meta_bet = ""
-meta_amt = ""
+meta_amt = 0.0
 
 # Sidebar
 with st.sidebar:
     st.title("Bakura 11-Friend MVP")
-    session.unit = st.number_input("Unit Size",1.0,step=0.5,value=session.unit)
+    session.unit = st.number_input("Unit Size", 1.0, step=0.5, value=session.unit)
     if st.button("New Shoe"):
         session.reset()
 
-    # EV-weighted Meta-Strategy
+    # EV-weighted Meta-Strategy (uses step+1 for amt1)
     best_ev = -1e9
     ev_cands = []
     for f in session.friends:
         b1 = f.next_bet_choice()
         if b1 not in WIN_PROB:
             continue
-        # assume we will be on the *next* progression step
+        # progression step+1
         mult = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
-        idx  = min(f.step + 1, len(mult) - 1)
-        amt1 = session.unit * mult[idx]
+        idx1 = min(f.step+1, len(mult)-1)
+        amt1 = session.unit * mult[idx1]
         amt2 = amt1 * 2
         b2 = f.sequence[(f.idx+1)%len(f.sequence)] if f.sequence else b1
         p1,p2 = WIN_PROB[b1], WIN_PROB[b2]
@@ -247,19 +247,17 @@ with st.sidebar:
         )
         if ev > best_ev + 1e-6:
             best_ev = ev
-            ev_cands = [(f,b1,amt1)]
+            ev_cands = [(f, b1, amt1)]
         elif abs(ev - best_ev) < 1e-6:
-            ev_cands.append((f,b1,amt1))
+            ev_cands.append((f, b1, amt1))
 
     if ev_cands:
         bets_set = {b for _,b,_ in ev_cands}
         if len(ev_cands)>1 and len(bets_set)>1:
-            friend0, meta_bet, meta_amt = None, "NB", ""
+            friend0, meta_bet, meta_amt = None, "NB", 0.0
         else:
-            friend0, meta_bet, amt0 = ev_cands[0]
-            meta_amt = amt0
-        display_amt = f"${meta_amt:.2f}" if meta_amt else ""
-
+            friend0, meta_bet, meta_amt = ev_cands[0]
+        display_amt = f"${meta_amt:.2f}"
         st.markdown(f"**Meta-EV**: {best_ev:.2f}  \n"
                     f"Friend(s): {', '.join(f.name for f,_,_ in ev_cands)}  \n"
                     f"Bet: {meta_bet}  \n"
@@ -276,29 +274,32 @@ with st.sidebar:
         tb = bets2.pop()
         ta_amt = max(f.next_bet_amount(session.unit) for f in tfs)
         ta = f"${ta_amt:.2f}"
-    st.markdown(f"""<div style="background:orange;padding:8px;border-radius:4px;">
-Top Misses: {names}<br>
-Count: {top_miss}<br>
-Next: {tb} {ta}
-</div>""", unsafe_allow_html=True)
+    html = (
+        f"<div style='background:orange;padding:8px;border-radius:4px;'>"
+        f"Top Misses: {names}<br>"
+        f"Count: {top_miss}<br>"
+        f"Next: {tb} {ta}"
+        "</div>"
+    )
+    st.markdown(html, unsafe_allow_html=True)
 
-# Hand entry & Meta record
-col1,col2,col3 = st.columns(3)
-with col1:
+# Hand buttons & record_meta
+c1,c2,c3 = st.columns(3)
+with c1:
     if st.button("Record Banker"):
-        session.record_meta('B', friend0, meta_bet, meta_amt if isinstance(meta_amt, float) else 0.0)
+        session.record_meta('B', friend0, meta_bet, meta_amt)
         session.add_hand('B')
-with col2:
+with c2:
     if st.button("Record Player"):
-        session.record_meta('P', friend0, meta_bet, meta_amt if isinstance(meta_amt, float) else 0.0)
+        session.record_meta('P', friend0, meta_bet, meta_amt)
         session.add_hand('P')
-with col3:
+with c3:
     if st.button("Record Tie"):
-        session.record_meta('T', friend0, meta_bet, meta_amt if isinstance(meta_amt, float) else 0.0)
+        session.record_meta('T', friend0, meta_bet, meta_amt)
         session.add_hand('T')
 
-# Star 2.0 progression table
-star_mult=[1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
+# Star 2.0 table
+star_mult = [1,1.5,2.5,2.5,5,5,7.5,10,12.5,17.5,22.5,30]
 star_df = pd.DataFrame([[session.unit*m for m in star_mult]],
                        index=['Bet Amt'], columns=list(range(1,13)))
 st.write("### Star 2.0 Progression (12 steps)")
@@ -307,11 +308,11 @@ st.dataframe(star_df, use_container_width=True)
 # Friend dashboard
 df = session.get_state_df()
 t_df = df.set_index('Name').T
-t_df.loc["History"] = [" ".join(session.history)] * len(t_df.columns)
-header = ["Metric"] + list(t_df.columns)
-values = [t_df.index.tolist()] + [t_df[c].tolist() for c in t_df.columns]
-num = len(values[0])
-cell_colors = [["white"]*num]
+t_df.loc["History"] = [" ".join(session.history)]*len(t_df.columns)
+header=["Metric"]+list(t_df.columns)
+values=[t_df.index.tolist()] + [t_df[c].tolist() for c in t_df.columns]
+num=len(values[0])
+cell_colors=[["white"]*num]
 for col in t_df.columns:
     miss = t_df.at['Miss Count', col]
     col_col = ["lightgreen" if m in ("Next Bet","Next Amount") and miss>=5 else "white"
