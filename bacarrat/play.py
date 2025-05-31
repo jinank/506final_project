@@ -341,9 +341,9 @@ st.markdown("---")
 
 def suggest_next_bet(session: Session):
     """
-    1) Find all friends with miss_count == 5 (i.e. they just missed their 5th in a row).
+    1) Find all friends with miss_count >= 5 (i.e. they just missed their 5th in a row).
     2) Among those, group by each friend’s next_bet_choice() side (B/P).
-    3) If no one has miss_count == 5, return None (no suggestion yet).
+    3) If no one has miss_count >= 5, return None (no suggestion yet).
     4) If all “5‐miss friends” share the same side, pick the maximum next_bet_amount among them.
        Otherwise, count frequency of each side, pick the side with majority, then pick max amount in that group.
     5) But our user will be instructed to bet the **opposite** side at that largest‐amount stake.
